@@ -1,4 +1,14 @@
-# Nidec Commander CDE Control
+# Nidec CommanderCDE 
+
+[![GitHub release](https://img.shields.io/badge/release-v0.0.3-green.svg?style=for-the-badge)](https://github.com/Nsfr750/Nidec_CommanderCDE/releases/latest)
+[![Python Version](https://img.shields.io/badge/python-3.8+-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg?style=for-the-badge)](https://github.com/Nsfr750/Nidec_CommanderCDE/graphs/commit-activity)
+[![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg?style=for-the-badge)](https://github.com/psf/black)
+[![Tests](https://img.shields.io/badge/tests-passing-green?style=for-the-badge)](https://github.com/Nsfr750/Nidec_CommanderCDE/actions)
+[![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen?style=for-the-badge)](https://codecov.io/gh/Nsfr750/Nidec_CommanderCDE)
+
+![Nidec CommanderCDE Screenshot](images/screenshot.png)
 
 A comprehensive Python GUI application for controlling and monitoring Nidec Commander CDE drives via Modbus RTU.
 

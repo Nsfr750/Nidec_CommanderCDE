@@ -1,0 +1,5 @@
+PyQt5>=5.15.9
+pyserial>=3.5
+pymodbus>=3.5.4
+QScintilla>=2.14.1
+python-dotenv>=1.0.0  # For environment variables

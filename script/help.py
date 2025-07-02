@@ -139,7 +139,7 @@ class HelpWindow(QDialog):
             
             <div class="warning">
                 <h3>{need_help}</h3>
-                <p>{visit_github} <a href="https://github.com/NsNsfr750/nidec-commander">GitHub</a>.</p>
+                <p>{visit_github} <a href="https://github.com/Nsfr750/Nidec_CommanderCDE">GitHub</a>.</p>
             </div>
             
             {help_content}

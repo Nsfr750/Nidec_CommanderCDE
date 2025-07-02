@@ -1,7 +1,7 @@
-from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton, 
-                            QLabel, QWidget, QSizePolicy)
-from PyQt5.QtCore import Qt, QUrl
-from PyQt5.QtGui import QDesktopServices
+from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton, 
+                            QLabel, QWidget, QSizePolicy, QMessageBox)
+from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtGui import QDesktopServices
 from lang.translations import t
 
 # Sponsor Class
@@ -9,14 +9,14 @@ class Sponsor(QDialog):
     @staticmethod
     def show_sponsor(parent=None, lang='en'):
         dialog = Sponsor(parent, lang)
-        dialog.exec_()
+        dialog.exec()
     
     def __init__(self, parent=None, lang='en'):
         super().__init__(parent)
         self.lang = lang
         self.setWindowTitle(t('sponsor', lang))
         self.setMinimumSize(600, 200)
-        self.setWindowModality(Qt.ApplicationModal)
+        self.setWindowModality(Qt.WindowModality.ApplicationModal)
         
         self.setup_ui()
     
@@ -25,7 +25,7 @@ class Sponsor(QDialog):
         
         # Title
         title = QLabel(t('support_development', self.lang))
-        title.setAlignment(Qt.AlignCenter)
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 20px;")
         layout.addWidget(title)
         
@@ -45,18 +45,23 @@ class Sponsor(QDialog):
         
         for text, url in buttons:
             btn = QPushButton(text, self)
-            btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
             btn.setStyleSheet("""
                 QPushButton {
                     padding: 8px;
                     margin: 2px;
-                    background-color: #f0f0f0;
-                    border: 1px solid #ccc;
+                    background-color: #1976D2;  /* Blue background */
+                    color: white;              /* White text */
+                    border: 1px solid #1565C0;  /* Slightly darker blue border */
                     border-radius: 4px;
+                    font-weight: bold;
                 }
                 QPushButton:hover {
-                    background-color: #e0e0e0;
-                    border-color: #999;
+                    background-color: #2196F3;  /* Lighter blue on hover */
+                    border-color: #1976D2;
+                }
+                QPushButton:pressed {
+                    background-color: #0D47A1;  /* Darker blue when pressed */
                 }
             """)
             btn.clicked.connect(lambda checked, u=url: self.open_url(u))
@@ -66,14 +71,13 @@ class Sponsor(QDialog):
         
         # Close button
         close_btn = QPushButton(t('close', self.lang))
+        close_btn.setFixedSize(100, 30)
         close_btn.clicked.connect(self.close)
-        close_btn.setMaximumWidth(100)
         
         btn_container = QWidget()
         btn_layout = QHBoxLayout(btn_container)
         btn_layout.addStretch()
         btn_layout.addWidget(close_btn)
-        btn_layout.addStretch()
         
         layout.addStretch()
         layout.addWidget(btn_container)

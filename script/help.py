@@ -1,9 +1,9 @@
 import os
 import sys
-from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTextBrowser, 
-                            QPushButton, QLabel, QApplication, QWidget, QScrollArea)
-from PyQt5.QtCore import Qt, QUrl
-from PyQt5.QtGui import QFont
+from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTextBrowser, 
+                            QPushButton, QLabel, QApplication, QWidget, QScrollArea, QSizePolicy)
+from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtGui import QFont
 
 # Add project root to Python path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -16,14 +16,14 @@ class HelpWindow(QDialog):
     @staticmethod
     def show_help(parent=None, lang='en'):
         dialog = HelpWindow(parent, lang)
-        dialog.exec_()
+        dialog.exec()
     
     def __init__(self, parent=None, lang='en'):
         super().__init__(parent)
         self.lang = lang
         self.setWindowTitle(f"{t('app_title', lang)} - {t('help_menu', lang)}")
         self.setMinimumSize(800, 600)
-        self.setWindowModality(Qt.ApplicationModal)
+        self.setWindowModality(Qt.WindowModality.ApplicationModal)
         
         main_layout = QVBoxLayout()
         
@@ -33,8 +33,8 @@ class HelpWindow(QDialog):
         lang_layout.addWidget(lang_label)
         
         # Language buttons
-        for lang_code in ['en', 'it', 'es', 'pt', 'de', 'fr', 'nl', 'ru', 'zh', 'jp', 'ar']:
-            btn = QPushButton(t(lang_code, lang_code))
+        for lang_code in ['en', 'it']:
+            btn = QPushButton(t(lang_code, lang_code))  # Use lang_code for both key and language
             btn.clicked.connect(lambda checked, l=lang_code: self.change_language(l))
             lang_layout.addWidget(btn)
         
@@ -47,7 +47,7 @@ class HelpWindow(QDialog):
         title_font.setBold(True)
         title_font.setPointSize(16)
         title.setFont(title_font)
-        title.setAlignment(Qt.AlignCenter)
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         main_layout.addWidget(title)
         
         # Help content
@@ -59,7 +59,7 @@ class HelpWindow(QDialog):
         # Close button
         close_btn = QPushButton(t('close', self.lang))
         close_btn.clicked.connect(self.close)
-        main_layout.addWidget(close_btn, alignment=Qt.AlignRight)
+        main_layout.addWidget(close_btn, alignment=Qt.AlignmentFlag.AlignRight)
         
         self.setLayout(main_layout)
     
@@ -77,20 +77,27 @@ class HelpWindow(QDialog):
         <head>
             <style>
                 body {{ font-family: Arial, sans-serif; line-height: 1.6; margin: 20px; }}
-                h1 {{ color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 10px; }}
-                h2 {{ color: #3498db; margin-top: 20px; }}
-                h3 {{ color: #7f8c8d; }}
+                h1 {{ color: white; border-bottom: 1px solid #eee; padding-bottom: 10px; }}
+                h2 {{ color: white; margin-top: 20px; }}
+                h3 {{ color: white; }}
                 ul, ol {{ margin: 10px 0 10px 20px; }}
                 li {{ margin: 5px 0; }}
                 .note {{ 
-                    background-color: #f8f9fa; 
-                    padding: 10px 15px;
-                    border-left: 4px solid #3498db; 
-                    margin: 15px 0;
+                    background-color: #1976D2; 
+                    color: white;
+                    padding: 12px 16px;
                     border-radius: 4px;
+                    margin: 15px 0;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+                }}
+                .note h4 {{
+                    color: white;
+                    margin-top: 0;
+                    margin-bottom: 10px;
+                    font-size: 1.1em;
                 }}
                 .warning {{ 
-                    background-color: #fff3cd; 
+                    background-color: blue; 
                     padding: 10px 15px;
                     border-left: 4px solid #ffc107; 
                     margin: 15px 0;
@@ -126,7 +133,7 @@ class HelpWindow(QDialog):
         </head>
         <body>
             <div class="note">
-                <h2>{getting_started}</h2>
+                <h4>{getting_started}</h4>
                 <p>{welcome_message}</p>
             </div>
             
@@ -138,7 +145,7 @@ class HelpWindow(QDialog):
             </ul>
             
             <div class="warning">
-                <h3>{need_help}</h3>
+                <h2>{need_help}</h2>
                 <p>{visit_github} <a href="https://github.com/Nsfr750/Nidec_CommanderCDE">GitHub</a>.</p>
             </div>
             
@@ -167,7 +174,7 @@ class HelpWindow(QDialog):
         help_texts = {
             'en': """
             <h2>Getting Started</h2>
-            <p>Welcome to Nidec Commander CDE! This application allows you to control and monitor Nidec motor drives.</p>
+            <p>Welcome to Nidec CommanderCDE. This application allows you to control and monitor Nidec motor drives.</p>
             
             <h3>Connecting to a Drive</h3>
             <ol>
@@ -201,7 +208,7 @@ class HelpWindow(QDialog):
             
             'it': """
             <h2>Per iniziare</h2>
-            <p>Benvenuto in Nidec Commander CDE! Questa applicazione ti consente di controllare e monitorare gli azionamenti Nidec.</p>
+            <p>Benvenuto in Nidec CommanderCDE. Questa applicazione ti consente di controllare e monitorare gli azionamenti Nidec.</p>
             
             <h3>Connessione all'azionamento</h3>
             <ol>
@@ -230,312 +237,6 @@ class HelpWindow(QDialog):
             <div class="note">
                 <h4>Nota</h4>
                 <p>Assicurati che l'azionamento sia correttamente collegato e alimentato prima di tentare di controllarlo.</p>
-            </div>
-            """,
-            
-            'es': """
-            <h2>Primeros pasos</h2>
-            <p>¡Bienvenido a Nidec Commander CDE! Esta aplicación te permite controlar y monitorear los variadores de Nidec.</p>
-            
-            <h3>Conexión al variador</h3>
-            <ol>
-                <li>Selecciona tu modelo de variador del menú desplegable</li>
-                <li>Elige el puerto COM correcto de la lista</li>
-                <li>Configura la velocidad de transmisión y otros parámetros de conexión</li>
-                <li>Haz clic en 'Conectar' para establecer la comunicación</li>
-            </ol>
-            
-            <h3>Controles básicos</h3>
-            <ul>
-                <li>Usa los botones 'Iniciar' y 'Detener' para controlar el motor</li>
-                <li>Ajusta la velocidad usando el control deslizante o el campo de entrada</li>
-                <li>Cambia la dirección usando los botones de control de dirección</li>
-            </ul>
-            
-            <h3>Monitoreo</h3>
-            <p>El panel muestra información en tiempo real sobre el estado del variador, incluyendo:</p>
-            <ul>
-                <li>Frecuencia de salida</li>
-                <li>Corriente de salida</li>
-                <li>Tensión del bus de CC</li>
-                <li>Estado del variador e información de fallos</li>
-            </ul>
-            
-            <div class="note">
-                <h4>Nota</h4>
-                <p>Asegúrate de que el variador esté correctamente conectado y alimentado antes de intentar controlarlo.</p>
-            </div>
-            """,
-            
-            'pt': """
-            <h2>Introdução</h2>
-            <p>Bem-vindo ao Nidec Commander CDE! Este aplicativo permite controlar e monitorar acionamentos Nidec.</p>
-            
-            <h3>Conexão ao acionamento</h3>
-            <ol>
-                <li>Selecione o modelo do seu acionamento no menu suspenso</li>
-                <li>Escolha a porta COM correta na lista</li>
-                <li>Defina a taxa de transmissão e outros parâmetros de conexão</li>
-                <li>Clique em 'Conectar' para estabelecer a comunicação</li>
-            </ol>
-            
-            <h3>Controles básicos</h3>
-            <ul>
-                <li>Use os botões 'Iniciar' e 'Parar' para controlar o motor</li>
-                <li>Ajuste a velocidade usando o controle deslizante ou o campo de entrada</li>
-                <li>Mude a direção usando os botões de controle de direção</li>
-            </ul>
-            
-            <h3>Monitoramento</h3>
-            <p>O painel exibe informações em tempo real sobre o status do acionamento, incluindo:</p>
-            <ul>
-                <li>Frequência de saída</li>
-                <li>Corrente de saída</li>
-                <li>Tensão do barramento CC</li>
-                <li>Status do acionamento e informações de falhas</li>
-            </ul>
-            
-            <div class="note">
-                <h4>Nota</h4>
-                <p>Certifique-se de que o acionamento esteja corretamente conectado e energizado antes de tentar controlá-lo.</p>
-            </div>
-            """,
-            
-            'de': """
-            <h2>Erste Schritte</h2>
-            <p>Willkommen bei Nidec Commander CDE! Diese Anwendung ermöglicht die Steuerung und Überwachung von Nidec Antrieben.</p>
-            
-            <h3>Verbindung zum Antrieb</h3>
-            <ol>
-                <li>Wählen Sie Ihr Antriebsmodell aus dem Dropdown-Menü</li>
-                <li>Wählen Sie den richtigen COM-Port aus der Liste</li>
-                <li>Stellen Sie die Übertragungsrate und andere Verbindungsparameter ein</li>
-                <li>Klicken Sie auf 'Verbinden', um die Kommunikation herzustellen</li>
-            </ol>
-            
-            <h3>Grundlegende Steuerung</h3>
-            <ul>
-                <li>Verwenden Sie die Schaltflächen 'Start' und 'Stopp', um den Motor zu steuern</li>
-                <li>Stellen Sie die Geschwindigkeit mit dem Schieberegler oder dem Eingabefeld ein</li>
-                <li>Ändern Sie die Richtung mit den Richtungstasten</li>
-            </ul>
-            
-            <h3>Überwachung</h3>
-            <p>Das Dashboard zeigt Echtzeitinformationen zum Antriebsstatus an, einschließlich:</p>
-            <ul>
-                <li>Ausgangsfrequenz</li>
-                <li>Ausgangsstrom</li>
-                <li>Gleichspannung</li>
-                <li>Antriebsstatus und Fehlerinformationen</li>
-            </ul>
-            
-            <div class="note">
-                <h4>Hinweis</h4>
-                <p>Stellen Sie sicher, dass der Antrieb ordnungsgemäß angeschlossen und eingeschaltet ist, bevor Sie versuchen, ihn zu steuern.</p>
-            </div>
-            """,
-            
-            'fr': """
-            <h2>Pour commencer</h2>
-            <p>Bienvenue dans Nidec Commander CDE ! Cette application vous permet de commander et de surveiller les variateurs Nidec.</p>
-            
-            <h3>Connexion au variateur</h3>
-            <ol>
-                <li>Sélectionnez votre modèle de variateur dans le menu déroulant</li>
-                <li>Choisissez le port COM approprié dans la liste</li>
-                <li>Définissez la vitesse de transmission et les autres paramètres de connexion</li>
-                <li>Cliquez sur 'Connecter' pour établir la communication</li>
-            </ol>
-            
-            <h3>Commandes de base</h3>
-            <ul>
-                <li>Utilisez les boutons 'Démarrer' et 'Arrêter' pour commander le moteur</li>
-                <li>Ajustez la vitesse à l'aide du curseur ou du champ de saisie</li>
-                <li>Changez le sens de rotation à l'aide des boutons de commande de direction</li>
-            </ul>
-            
-            <h3>Surveillance</h3>
-            <p>Le tableau de bord affiche en temps réel des informations sur l'état du variateur, notamment :</p>
-            <ul>
-                <li>Fréquence de sortie</li>
-                <li>Courant de sortie</li>
-                <li>Tension du bus continu</li>
-                <li>État du variateur et informations sur les défauts</li>
-            </ul>
-            
-            <div class="note">
-                <h4>Remarque</h4>
-                <p>Assurez-vous que le variateur est correctement connecté et alimenté avant de tenter de le commander.</p>
-            </div>
-            """,
-            
-            'nl': """
-            <h2>Eerste stappen</h2>
-            <p>Welkom bij Nidec Commander CDE! Deze applicatie laat u toe om Nidec aandrijvingen te bedienen en te bewaken.</p>
-            
-            <h3>Verbinding maken met de aandrijving</h3>
-            <ol>
-                <li>Selecteer uw aandrijvingsmodel uit het dropdown-menu</li>
-                <li>Kies de juiste COM-poort uit de lijst</li>
-                <li>Stel de transmissiesnelheid en andere verbindingparameters in</li>
-                <li>Klik op 'Verbinden' om de communicatie tot stand te brengen</li>
-            </ol>
-            
-            <h3>Basisbediening</h3>
-            <ul>
-                <li>Gebruik de knoppen 'Start' en 'Stop' om de motor te bedienen</li>
-                <li>Pas de snelheid aan met de schuifregelaar of het invoerveld</li>
-                <li>Wijzig de richting met de richtingstoetsen</li>
-            </ul>
-            
-            <h3>Bewaking</h3>
-            <p>Het dashboard toont real-time informatie over de status van de aandrijving, inclusief:</p>
-            <ul>
-                <li>Uitgangsfrequentie</li>
-                <li>Uitgangsstroom</li>
-                <li>Gelijkspanning</li>
-                <li>Aandrijvingsstatus en foutinformatie</li>
-            </ul>
-            
-            <div class="note">
-                <h4>Opmerking</h4>
-                <p>Zorg ervoor dat de aandrijving correct is aangesloten en ingeschakeld voordat u deze probeert te bedienen.</p>
-            </div>
-            """,
-            
-            'ru': """
-            <h2>Первые шаги</h2>
-            <p>Добро пожаловать в Nidec Commander CDE! Это приложение позволяет управлять и контролировать привод Nidec.</p>
-            
-            <h3>Подключение к приводу</h3>
-            <ol>
-                <li>Выберите модель привода из выпадающего меню</li>
-                <li>Выберите правильный порт COM из списка</li>
-                <li>Установите скорость передачи и другие параметры подключения</li>
-                <li>Нажмите 'Подключить', чтобы установить связь</li>
-            </ol>
-            
-            <h3>Базовое управление</h3>
-            <ul>
-                <li>Используйте кнопки 'Старт' и 'Стоп', чтобы управлять двигателем</li>
-                <li>Регулируйте скорость с помощью ползунка или поля ввода</li>
-                <li>Измените направление с помощью кнопок управления направлением</li>
-            </ul>
-            
-            <h3>Мониторинг</h3>
-            <p>Панель управления отображает информацию в режиме реального времени о состоянии привода, включая:</p>
-            <ul>
-                <li>Частота выхода</li>
-                <li>Ток выхода</li>
-                <li>Напряжение шины постоянного тока</li>
-                <li>Состояние привода и информация об ошибках</li>
-            </ul>
-            
-            <div class="note">
-                <h4>Примечание</h4>
-                <p>Убедитесь, что привод правильно подключен и включен перед тем, как попытаться управлять им.</p>
-            </div>
-            """,
-            
-            'zh': """
-            <h2>开始使用</h2>
-            <p>欢迎使用 Nidec Commander CDE！此应用程序允许您控制和监控 Nidec 驱动器。</p>
-            
-            <h3>连接驱动器</h3>
-            <ol>
-                <li>从下拉菜单中选择驱动器模型</li>
-                <li>从列表中选择正确的 COM 端口</li>
-                <li>设置传输速率和其他连接参数</li>
-                <li>单击“连接”以建立通信</li>
-            </ol>
-            
-            <h3>基本控制</h3>
-            <ul>
-                <li>使用“启动”和“停止”按钮控制电机</li>
-                <li>使用滑块或输入字段调整速度</li>
-                <li>使用方向控制按钮更改方向</li>
-            </ul>
-            
-            <h3>监控</h3>
-            <p>仪表板显示驱动器状态的实时信息，包括：</p>
-            <ul>
-                <li>输出频率</li>
-                <li>输出电流</li>
-                <li>直流总线电压</li>
-                <li>驱动器状态和故障信息</li>
-            </ul>
-            
-            <div class="note">
-                <h4>注意</h4>
-                <p>在尝试控制驱动器之前，请确保驱动器正确连接并通电。</p>
-            </div>
-            """,
-            
-            'jp': """
-            <h2>はじめに</h2>
-            <p>Nidec Commander CDEへようこそ！このアプリケーションは、Nidecのドライブを制御および監視することができます。</p>
-            
-            <h3>ドライブへの接続</h3>
-            <ol>
-                <li>ドロップダウンメニューからドライブモデルを選択してください</li>
-                <li>リストから正しいCOMポートを選択してください</li>
-                <li>送信速度とその他の接続パラメータを設定してください</li>
-                <li>通信を確立するには、「接続」をクリックしてください</li>
-            </ol>
-            
-            <h3>基本的な操作</h3>
-            <ul>
-                <li>「スタート」と「ストップ」のボタンを使用してモーターを制御します</li>
-                <li>スライダーまたは入力フィールドを使用して速度を調整します</li>
-                <li>方向制御ボタンを使用して方向を変更します</li>
-            </ul>
-            
-            <h3>モニタリング</h3>
-            <p>ダッシュボードは、ドライブの状態に関するリアルタイム情報を表示します。これには、以下のものがあります。</p>
-            <ul>
-                <li>出力周波数</li>
-                <li>出力電流</li>
-                <li>直流バスの電圧</li>
-                <li>ドライブの状態とエラー情報</li>
-            </ul>
-            
-            <div class="note">
-                <h4>注意</h4>
-                <p>ドライブを制御しようとする前に、ドライブが正しく接続され、電源が入っていることを確認してください。</p>
-            </div>
-            """,
-            
-            'ar': """
-            <h2>البداية</h2>
-            <p>مرحباً بك في Nidec Commander CDE! هذا التطبيق يسمح لك بالتحكم في محركات Nidec ومراقبتها.</p>
-            
-            <h3>اتصال المحرك</h3>
-            <ol>
-                <li>حدد نموذج المحرك من القائمة المنسدلة</li>
-                <li>اختر المنفذ الصحيح من القائمة</li>
-                <li>اضبط معدل الإرسال و معلمات الاتصال الأخرى</li>
-                <li>انقر على "اتصال" لإنشاء الاتصال</li>
-            </ol>
-            
-            <h3>التحكم الأساسي</h3>
-            <ul>
-                <li>استخدم أزرار "تشغيل" و "إيقاف" للتحكم في المحرك</li>
-                <li>اضبط السرعة باستخدام الشريط أو حقل الإدخال</li>
-                <li>غير الاتجاه باستخدام أزرار التحكم في الاتجاه</li>
-            </ul>
-            
-            <h3>مراقبة</h3>
-            <p>لوحة التحكم تعرض معلومات في الوقت الفعلي حول حالة المحرك، بما في ذلك:</p>
-            <ul>
-                <li>تردد الإخراج</li>
-                <li>تيار الإخراج</li>
-                <li>جهد خط التوصيل المستمر</li>
-                <li>حالة المحرك ومعلومات الأخطاء</li>
-            </ul>
-            
-            <div class="note">
-                <h4>ملاحظة</h4>
-                <p>تأكد من أن المحرك متصل بشكل صحيح ومشغل قبل محاولة التحكم به.</p>
             </div>
             """,
         }

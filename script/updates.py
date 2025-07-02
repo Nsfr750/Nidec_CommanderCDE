@@ -7,10 +7,9 @@ import requests
 import json
 from pathlib import Path
 import sys
-from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QLabel, QPushButton, 
-                            QMessageBox, QProgressBar, QWidget, QHBoxLayout,
-                            QApplication)
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QObject
+from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QLabel, QPushButton, 
+                            QProgressBar, QHBoxLayout, QMessageBox, QWidget)
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QObject
 
 # Get the application directory
 APP_DIR = Path(__file__).parent.parent
@@ -195,8 +194,8 @@ def check_for_updates(parent: Optional[QWidget] = None, lang: str = 'en',
         btn_box = QHBoxLayout()
         
         def open_download():
-            from PyQt5.QtGui import QDesktopServices
-            from PyQt5.QtCore import QUrl
+            from PyQt6.QtGui import QDesktopServices
+            from PyQt6.QtCore import QUrl
             QDesktopServices.openUrl(QUrl(url))
             dialog.accept()
         

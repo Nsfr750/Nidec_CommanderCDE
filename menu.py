@@ -12,7 +12,7 @@ Key Features:
 - Update checking functionality
 
 Dependencies:
-- PyQt5: For GUI components
+- PyQt6: For GUI components
 - script/*: Helper modules for various features
 - lang.translations: For internationalization support
 
@@ -31,13 +31,13 @@ from typing import Optional, Dict, Any
 script_dir = Path(__file__).parent / 'script'
 sys.path.insert(0, str(script_dir))
 
-# PyQt5 imports
-from PyQt5.QtWidgets import (
+# PyQt6 imports
+from PyQt6.QtWidgets import (
     QMainWindow, QApplication, QMenuBar, QMenu, 
-    QAction, QMessageBox, QWidget, QVBoxLayout, QActionGroup
+    QMessageBox, QWidget, QVBoxLayout
 )
-from PyQt5.QtGui import QKeySequence, QCloseEvent, QColor, QPalette
-from PyQt5.QtCore import Qt, QSettings, QObject, pyqtSignal
+from PyQt6.QtGui import QCloseEvent, QColor, QPalette, QAction, QKeySequence, QActionGroup
+from PyQt6.QtCore import Qt, QSettings, QObject, pyqtSignal
 
 # Local application imports
 from help import HelpWindow
@@ -109,13 +109,13 @@ class MainWindow(QMainWindow):
         
         # Save Configuration
         save_config_action = QAction(t('save_config', self.current_language), self)
-        save_config_action.setShortcut(QKeySequence.Save)
+        save_config_action.setShortcut(QKeySequence.StandardKey.Save)
         save_config_action.triggered.connect(self.save_configuration)
         file_menu.addAction(save_config_action)
         
         # Load Configuration
         load_config_action = QAction(t('load_config', self.current_language), self)
-        load_config_action.setShortcut(QKeySequence.Open)
+        load_config_action.setShortcut(QKeySequence.StandardKey.Open)
         load_config_action.triggered.connect(self.load_configuration)
         file_menu.addAction(load_config_action)
         
@@ -136,7 +136,7 @@ class MainWindow(QMainWindow):
         file_menu.addSeparator()
         
         exit_action = QAction(t('exit', self.current_language), self)
-        exit_action.setShortcut(QKeySequence.Quit)
+        exit_action.setShortcut(QKeySequence.StandardKey.Quit)
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
         
@@ -144,15 +144,15 @@ class MainWindow(QMainWindow):
         tools_menu = menubar.addMenu(t('tools_menu', self.current_language))
         
         cut_action = QAction(t('cut', self.current_language), self)
-        cut_action.setShortcut(QKeySequence.Cut)
+        cut_action.setShortcut(QKeySequence.StandardKey.Cut)
         tools_menu.addAction(cut_action)
         
         copy_action = QAction(t('copy', self.current_language), self)
-        copy_action.setShortcut(QKeySequence.Copy)
+        copy_action.setShortcut(QKeySequence.StandardKey.Copy)
         tools_menu.addAction(copy_action)
         
         paste_action = QAction(t('paste', self.current_language), self)
-        paste_action.setShortcut(QKeySequence.Paste)
+        paste_action.setShortcut(QKeySequence.StandardKey.Paste)
         tools_menu.addAction(paste_action)
                 
         # Language menu
@@ -292,85 +292,59 @@ class MainWindow(QMainWindow):
         dark_palette = app.palette()
         
         # Base colors
-        dark_palette.setColor(dark_palette.Window, QColor(53, 53, 53))
-        dark_palette.setColor(dark_palette.WindowText, Qt.white)
-        dark_palette.setColor(dark_palette.Base, QColor(35, 35, 35))
-        dark_palette.setColor(dark_palette.AlternateBase, QColor(53, 53, 53))
-        dark_palette.setColor(dark_palette.ToolTipBase, Qt.white)
-        dark_palette.setColor(dark_palette.ToolTipText, Qt.white)
-        dark_palette.setColor(dark_palette.Text, Qt.white)
-        dark_palette.setColor(dark_palette.Button, QColor(53, 53, 53))
-        dark_palette.setColor(dark_palette.ButtonText, Qt.white)
-        dark_palette.setColor(dark_palette.BrightText, Qt.red)
-        dark_palette.setColor(dark_palette.Link, QColor(42, 130, 218))
-        dark_palette.setColor(dark_palette.Highlight, QColor(42, 130, 218))
-        dark_palette.setColor(dark_palette.HighlightedText, Qt.white)
-        
-        # Disabled colors
-        dark_palette.setColor(dark_palette.Disabled, dark_palette.Text, QColor(127, 127, 127))
-        dark_palette.setColor(dark_palette.Disabled, dark_palette.ButtonText, QColor(127, 127, 127))
+        dark_palette.setColor(QPalette.ColorRole.Window, QColor(53, 53, 53))
+        dark_palette.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.white)
+        dark_palette.setColor(QPalette.ColorRole.Base, QColor(35, 35, 35))
+        dark_palette.setColor(QPalette.ColorRole.AlternateBase, QColor(53, 53, 53))
+        dark_palette.setColor(QPalette.ColorRole.ToolTipBase, Qt.GlobalColor.white)
+        dark_palette.setColor(QPalette.ColorRole.ToolTipText, Qt.GlobalColor.white)
+        dark_palette.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.white)
+        dark_palette.setColor(QPalette.ColorRole.Button, QColor(53, 53, 53))
+        dark_palette.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.white)
+        dark_palette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
+        dark_palette.setColor(QPalette.ColorRole.Link, QColor(42, 130, 218))
+        dark_palette.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
+        dark_palette.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.white)
         
         # Apply the palette
         app.setPalette(dark_palette)
         
-        # Update style to ensure the theme is applied
+        # Set the style sheet for additional theming
         app.setStyleSheet("""
-            QToolTip { 
-                color: #ffffff; 
-                background-color: #2a82da; 
-                border: 1px solid white; 
+            QToolTip {
+                color: #ffffff;
+                background-color: #2a82da;
+                border: 1px solid white;
             }
-            QMenu::item:selected { 
-                background-color: #2a82da; 
-            }
-            QTabBar::tab:selected { 
-                background: #2a82da; 
-                color: white; 
-            }
-        """)
-    
-    def set_light_theme(self):
-        """Apply a light theme to the application."""
-        # Set the Fusion style for consistent theming across platforms
-        app = QApplication.instance()
-        app.setStyle('Fusion')
-        
-        # Reset to default palette
-        app.setPalette(app.style().standardPalette())
-        
-        # Update style to ensure the theme is applied
-        app.setStyleSheet("""
-            QToolTip { 
-                border: 1px solid #2a82da; 
-                padding: 2px; 
-                border-radius: 3px; 
-                opacity: 240; 
-            }
-            QMenu::item:selected { 
-                background-color: #2a82da; 
+            QMenu::item:selected {
+                background-color: #2a82da;
                 color: white;
             }
         """)
     
-    def change_language(self, lang_code=None):
-        """Change the application language and update the UI immediately."""
-        if lang_code is None:
-            action = self.sender()
-            if not action or not action.isChecked():
-                return
-            lang_code = action.data()
+    def change_language(self, checked):
+        """Change the application language.
+        
+        Args:
+            checked: Boolean indicating if the action is checked (from the triggered signal)
+        """
+        # Get the action that triggered this slot
+        action = self.sender()
+        if not action or not isinstance(action, QAction) or not action.isChecked():
+            return
             
+        lang_code = action.data()
         if lang_code != self.current_language:
             self.current_language = lang_code
             self.settings.setValue("language", lang_code)
-            
-            # Update all UI elements with the new language
-            self.retranslate_ui()
             
             # Update the language menu check state
             if hasattr(self, 'language_group'):
                 for action in self.language_group.actions():
                     action.setChecked(action.data() == lang_code)
+            
+            # Retranslate the UI
+            self.retranslate_ui()
     
     def retranslate_ui(self):
         """Retranslate all UI elements with the current language."""
@@ -379,27 +353,45 @@ class MainWindow(QMainWindow):
         
         # Update menu bar
         if hasattr(self, 'menuBar'):
-            for menu in self.menuBar().findChildren(QMenu):
-                if menu.title() in [t('file_menu', 'en'), t('tools_menu', 'en'), 
-                                 t('language_menu', 'en'), t('help_menu', 'en')]:
-                    # This is one of our main menus
-                    if menu.title() == t('file_menu', 'en'):
+            menubar = self.menuBar()
+            
+            # Update main menus
+            for menu in menubar.findChildren(QMenu):
+                # Store the original title if not already stored
+                if not hasattr(menu, '_original_title'):
+                    menu._original_title = menu.title()
+                
+                # Update menu title based on original title
+                if menu._original_title in [t('file_menu', 'en'), t('tools_menu', 'en'), 
+                                         t('language_menu', 'en'), t('help_menu', 'en'),
+                                         t('theme_menu', 'en')]:
+                    if menu._original_title == t('file_menu', 'en'):
                         menu.setTitle(t('file_menu', self.current_language))
-                    elif menu.title() == t('tools_menu', 'en'):
+                    elif menu._original_title == t('tools_menu', 'en'):
                         menu.setTitle(t('tools_menu', self.current_language))
-                    elif menu.title() == t('language_menu', 'en'):
+                    elif menu._original_title == t('language_menu', 'en'):
                         menu.setTitle(t('language_menu', self.current_language))
-                    elif menu.title() == t('help_menu', 'en'):
+                    elif menu._original_title == t('help_menu', 'en'):
                         menu.setTitle(t('help_menu', self.current_language))
-                else:
-                    # This is a submenu or action
-                    for action in menu.actions():
-                        if not action.isSeparator() and action.text():
-                            # Find the translation key for this action's text
-                            for key, value in TRANSLATIONS['en'].items():
-                                if value == action.text() and key in TRANSLATIONS.get(self.current_language, {}):
-                                    action.setText(TRANSLATIONS[self.current_language][key])
-                                    break
+                    elif menu._original_title == t('theme_menu', 'en'):
+                        menu.setTitle(t('theme_menu', self.current_language))
+                
+                # Update menu actions
+                for action in menu.actions():
+                    if not action.isSeparator() and action.text():
+                        # Skip language and theme actions as they are handled separately
+                        if action in self.language_group.actions() or action in self.theme_group.actions():
+                            continue
+                            
+                        # Store original text if not already stored
+                        if not hasattr(action, '_original_text'):
+                            action._original_text = action.text()
+                        
+                        # Find the translation key for this action's text
+                        for key, value in TRANSLATIONS['en'].items():
+                            if value == action._original_text and key in TRANSLATIONS.get(self.current_language, {}):
+                                action.setText(TRANSLATIONS[self.current_language][key])
+                                break
     
     def check_for_updates(self):
         """Check for application updates."""

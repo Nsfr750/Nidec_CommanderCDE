@@ -29,9 +29,9 @@ import time
 from datetime import datetime
 import serial.tools.list_ports
 
-# PyQt5 imports for GUI components
-from PyQt5.QtCore import QTimer, QSettings, QDateTime, Qt
-from PyQt5.QtWidgets import (
+# PyQt6 imports for GUI components
+from PyQt6.QtCore import QTimer, QSettings, QDateTime, Qt
+from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QComboBox, QPushButton, QGroupBox, QLineEdit,
     QMessageBox, QTabWidget, QFormLayout, QDoubleSpinBox, QCheckBox,
@@ -39,17 +39,8 @@ from PyQt5.QtWidgets import (
     QHeaderView, QGridLayout
 )
 
-# Suppress PyQt5.sip deprecation warning
-import warnings
-# Try importing sip in a way that works with different PyQt5 versions
-try:
-    import PyQt5.sip as sip
-    if hasattr(sip, 'setapi'):
-        warnings.filterwarnings("ignore", category=DeprecationWarning, module='PyQt5.sip')
-except (ImportError, AttributeError):
-    # If sip import fails, the warning suppression isn't critical
-    pass
-from PyQt5.QtGui import QIcon
+# No sip import needed for PyQt6
+from PyQt6.QtGui import QIcon
 
 # Modbus communication
 from pymodbus.client import ModbusSerialClient as ModbusClient
@@ -557,7 +548,7 @@ class NidecCommanderGUI(MainWindow):
         self.log_table = QTableWidget(0, 6)
         self.log_table.setHorizontalHeaderLabels(["Timestamp", "Frequency (Hz)", "Current (A)", 
                                                "Voltage (V)", "Status", "Speed Ref"])
-        self.log_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.log_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         layout.addWidget(self.log_table)
         
         # Update UI based on current logging state
@@ -1196,106 +1187,251 @@ class NidecCommanderGUI(MainWindow):
     # Configuration Save/Load Methods
     
     def save_configuration(self):
-        """Save current configuration to a file"""
+        """
+        Save the current drive configuration to a JSON file.
+        
+        This method saves the current drive settings, including connection parameters,
+        drive parameters, and UI state to a JSON configuration file.
+        """
+        if not hasattr(self, 'last_used_dir'):
+            self.last_used_dir = os.path.expanduser("~/Documents")
+        
         file_path, _ = QFileDialog.getSaveFileName(
             self,
-            "Save Configuration",
-            os.path.join(self.last_used_dir, "nidec_config.json"),
+            t('save_configuration', self.current_language),
+            os.path.join(self.last_used_dir, f"nidec_{self.current_model}_config.json"),
             "JSON Files (*.json);;All Files (*)"
         )
         
         if not file_path:
-            return
+            return False
             
         if not file_path.endswith('.json'):
             file_path += '.json'
         
         try:
+            # Get current parameter values
             config = {
-                'version': '1.0',
+                'version': '1.1',
                 'timestamp': datetime.now().isoformat(),
+                'application': 'Nidec Commander CDE',
                 'model': self.current_model,
+                'language': self.current_language,
+                'theme': self.current_theme,
                 'connection': {
                     'port': self.port_combo.currentText(),
                     'baudrate': int(self.baud_combo.currentText()),
-                    'modbus_address': self.modbus_addr.value()
+                    'modbus_address': self.modbus_addr.value(),
+                    'timeout': 1.0,  # Default timeout in seconds
+                    'parity': 'E',   # Even parity
+                    'stopbits': 1,
+                    'bytesize': 8
                 },
-                'parameters': {
-                    'speed_reference': self.speed_spin.value(),
-                    'acceleration_time': self.get_parameter_value('Acceleration Time'),
-                    'deceleration_time': self.get_parameter_value('Deceleration Time'),
-                    'max_frequency': self.get_parameter_value('Maximum Frequency')
+                'drive_parameters': {
+                    # Speed control
+                    'reference_frequency': self.speed_spin.value(),
+                    'acceleration_time': self.accel_time.value(),
+                    'deceleration_time': self.decel_time.value(),
+                    'max_frequency': self.max_freq.value(),
+                    'min_frequency': 0.0,  # Default min frequency
+                    # Motor parameters
+                    'motor_rated_current': self.motor_current.value(),
+                    'motor_rated_voltage': 400.0,  # Default for 400V drives
+                    'motor_pole_pairs': 2,  # Default for most AC motors
+                    # Control mode settings
+                    'control_mode': 'V/F',  # Default control mode
+                    'torque_boost': 0.0,    # Default torque boost
+                    'slip_compensation': 0.0  # Default slip compensation
                 },
-                'logging': {
-                    'enabled': self.logging_enabled,
-                    'log_file': self.log_file_path.text(),
-                    'log_interval': self.log_interval
+                'io_settings': {
+                    'analog_input1_min': 0.0,
+                    'analog_input1_max': 10.0,
+                    'analog_input2_min': 0.0,
+                    'analog_input2_max': 10.0,
+                    'relay1_function': 'Run',
+                    'relay2_function': 'Fault'
+                },
+                'monitoring': {
+                    'update_interval': 1000,  # ms
+                    'log_interval': self.log_interval if hasattr(self, 'log_interval') else 1000,
+                    'show_tooltips': True,
+                    'show_status_bar': True
+                },
+                'ui_state': {
+                    'window_geometry': self.saveGeometry().toHex().data().decode(),
+                    'window_state': self.saveState().toHex().data().decode(),
+                    'selected_tab': self.tabs.currentIndex() if hasattr(self, 'tabs') else 0
                 }
             }
             
-            with open(file_path, 'w') as f:
-                json.dump(config, f, indent=4)
-                
-            QMessageBox.information(self, "Save Successful", 
-                                 f"Configuration saved to:\n{file_path}")
+            # Add logging settings if available
+            if hasattr(self, 'logging_enabled'):
+                config['monitoring']['logging_enabled'] = self.logging_enabled
+                if hasattr(self, 'log_file_path') and self.log_file_path.text():
+                    config['monitoring']['log_file'] = self.log_file_path.text()
+            
+            # Save the configuration file
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(config, f, indent=4, ensure_ascii=False)
+            
+            # Update last used directory
+            self.last_used_dir = os.path.dirname(file_path)
+            self.settings.setValue("last_used_dir", self.last_used_dir)
+            
+            # Show success message
+            QMessageBox.information(
+                self,
+                t('save_success', self.current_language),
+                f"{t('configuration_saved', self.current_language)}:\n{file_path}"
+            )
+            
+            return True
             
         except Exception as e:
-            QMessageBox.critical(self, "Save Failed", 
-                              f"Failed to save configuration:\n{str(e)}")
+            error_msg = f"{t('save_failed', self.current_language)}:\n{str(e)}"
+            QMessageBox.critical(self, t('error', self.current_language), error_msg)
+            return False
     
     def load_configuration(self):
-        """Load configuration from a file"""
+        """
+        Load configuration from a JSON file and apply settings.
+        
+        This method loads a previously saved configuration file and applies
+        the settings to the application. It handles different versions of
+        configuration files and provides appropriate error messages.
+        """
+        if not hasattr(self, 'last_used_dir'):
+            self.last_used_dir = os.path.expanduser("~/Documents")
+        
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Load Configuration",
+            t('load_configuration', self.current_language),
             self.last_used_dir,
             "JSON Files (*.json);;All Files (*)"
         )
         
         if not file_path or not os.path.exists(file_path):
-            return
+            return False
             
         try:
-            with open(file_path, 'r') as f:
+            with open(file_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
+            
+            # Check configuration version
+            config_version = config.get('version', '1.0')
+            
+            # Update last used directory
+            self.last_used_dir = os.path.dirname(file_path)
+            self.settings.setValue("last_used_dir", self.last_used_dir)
             
             # Apply model if different
             if 'model' in config and config['model'] != self.current_model:
                 self.model_combo.setCurrentText(config['model'])
             
+            # Apply language if different
+            if 'language' in config and config['language'] != self.current_language:
+                self.current_language = config['language']
+                self.retranslate_ui()
+            
+            # Apply theme if different
+            if 'theme' in config and config['theme'] != self.current_theme:
+                self.apply_theme(config['theme'])
+            
             # Apply connection settings
             if 'connection' in config:
                 conn = config['connection']
-                port_idx = self.port_combo.findText(conn.get('port', ''))
-                if port_idx >= 0:
-                    self.port_combo.setCurrentIndex(port_idx)
+                if 'port' in conn and conn['port'] in [self.port_combo.itemText(i) for i in range(self.port_combo.count())]:
+                    self.port_combo.setCurrentText(conn['port'])
+                if 'baudrate' in conn:
+                    baud = str(conn['baudrate'])
+                    if baud in [self.baud_combo.itemText(i) for i in range(self.baud_combo.count())]:
+                        self.baud_combo.setCurrentText(baud)
+                if 'modbus_address' in conn:
+                    self.modbus_addr.setValue(int(conn['modbus_address']))
+            
+            # Apply drive parameters
+            if 'drive_parameters' in config:
+                params = config['drive_parameters']
                 
-                baud_idx = self.baud_combo.findText(str(conn.get('baudrate', '9600')))
-                if baud_idx >= 0:
-                    self.baud_combo.setCurrentIndex(baud_idx)
-                
-                self.modbus_addr.setValue(conn.get('modbus_address', 1))
+                # Speed control
+                if 'reference_frequency' in params:
+                    self.speed_spin.setValue(float(params['reference_frequency']))
+                if 'acceleration_time' in params and hasattr(self, 'accel_time'):
+                    self.accel_time.setValue(float(params['acceleration_time']))
+                if 'deceleration_time' in params and hasattr(self, 'decel_time'):
+                    self.decel_time.setValue(float(params['deceleration_time']))
+                if 'max_frequency' in params and hasattr(self, 'max_freq'):
+                    self.max_freq.setValue(float(params['max_frequency']))
+                if 'motor_rated_current' in params and hasattr(self, 'motor_current'):
+                    self.motor_current.setValue(float(params['motor_rated_current']))
             
-            # Apply parameters
-            if 'parameters' in config:
-                params = config['parameters']
-                self.speed_spin.setValue(params.get('speed_reference', 0))
-                self.set_parameter_value('Acceleration Time', params.get('acceleration_time', 10.0))
-                self.set_parameter_value('Deceleration Time', params.get('deceleration_time', 10.0))
-                self.set_parameter_value('Maximum Frequency', params.get('max_frequency', 60.0))
+            # Apply monitoring settings
+            if 'monitoring' in config:
+                monitor = config['monitoring']
+                if 'log_interval' in monitor and hasattr(self, 'log_interval'):
+                    self.log_interval = int(monitor['log_interval'])
+                    if hasattr(self, 'log_interval_spin'):
+                        self.log_interval_spin.setValue(self.log_interval)
+                if 'logging_enabled' in monitor and hasattr(self, 'logging_enabled'):
+                    self.logging_enabled = bool(monitor['logging_enabled'])
+                if 'log_file' in monitor and hasattr(self, 'log_file_path'):
+                    self.log_file_path.setText(monitor['log_file'])
             
-            # Apply logging settings
-            if 'logging' in config and hasattr(self, 'logging_enabled'):
-                log_cfg = config['logging']
-                self.log_file_path.setText(log_cfg.get('log_file', ''))
-                self.log_interval_spin.setValue(log_cfg.get('log_interval', 1000))
+            # Apply UI state
+            if 'ui_state' in config:
+                ui = config['ui_state']
+                if 'window_geometry' in ui:
+                    try:
+                        self.restoreGeometry(QByteArray.fromHex(ui['window_geometry'].encode()))
+                    except:
+                        pass
+                if 'window_state' in ui:
+                    try:
+                        self.restoreState(QByteArray.fromHex(ui['window_state'].encode()))
+                    except:
+                        pass
+                if 'selected_tab' in ui and hasattr(self, 'tabs') and 0 <= ui['selected_tab'] < self.tabs.count():
+                    self.tabs.setCurrentIndex(ui['selected_tab'])
             
-            QMessageBox.information(self, "Load Successful", 
-                                 f"Configuration loaded from:\n{file_path}")
+            # Show success message
+            QMessageBox.information(
+                self,
+                t('load_success', self.current_language),
+                f"{t('configuration_loaded', self.current_language)}:\n{file_path}"
+            )
+            
+            return True
+            
+        except json.JSONDecodeError as e:
+            error_msg = f"{t('invalid_config_file', self.current_language)}:\n{str(e)}"
+            QMessageBox.critical(self, t('error', self.current_language), error_msg)
+            return False
             
         except Exception as e:
-            QMessageBox.critical(self, "Load Failed", 
-                              f"Failed to load configuration:\n{str(e)}")
+            error_msg = f"{t('load_failed', self.current_language)}:\n{str(e)}"
+            QMessageBox.critical(self, t('error', self.current_language), error_msg)
+            return False
+    
+    def closeEvent(self, event):
+        """Handle application close event."""
+        # Stop all timers
+        if hasattr(self, 'dashboard_timer') and self.dashboard_timer.isActive():
+            self.dashboard_timer.stop()
+        if hasattr(self, 'diag_timer') and self.diag_timer.isActive():
+            self.diag_timer.stop()
+            
+        # Disconnect from the drive if connected
+        if self.connected and hasattr(self, 'client') and self.client:
+            try:
+                self.disconnect_drive()
+            except Exception as e:
+                print(f"Error disconnecting from drive: {str(e)}")
+                
+        # Save settings
+        self.save_settings()
+        
+        # Accept the close event
+        event.accept()
     
     def retranslate_ui(self):
         """Retranslate all UI elements with the current language."""
@@ -1366,13 +1502,13 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     
     # Set application metadata
-    app.setApplicationName("Nidec Commander CDE")
-    app.setOrganizationName("Nidec")
-    app.setApplicationVersion("1.0.0")
+    app.setApplicationName("Nidec CommanderCDE")
+    app.setOrganizationName("Tuxxle")
+    app.setApplicationVersion("0.0.4")
     
     # Create and show the main window
     window = NidecCommanderGUI()
     window.show()
     
     # Start the application event loop
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

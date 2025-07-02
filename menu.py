@@ -36,7 +36,7 @@ from PyQt5.QtWidgets import (
     QMainWindow, QApplication, QMenuBar, QMenu, 
     QAction, QMessageBox, QWidget, QVBoxLayout, QActionGroup
 )
-from PyQt5.QtGui import QKeySequence, QCloseEvent
+from PyQt5.QtGui import QKeySequence, QCloseEvent, QColor, QPalette
 from PyQt5.QtCore import Qt, QSettings, QObject, pyqtSignal
 
 # Local application imports
@@ -85,8 +85,14 @@ class MainWindow(QMainWindow):
         # Set default language if not set
         self.current_language = self.settings.value("language", "en")
         
+        # Set default theme if not set (system, light, or dark)
+        self.current_theme = self.settings.value("theme", "system")
+        
         # Create the menu bar
         self.create_menu_bar()
+        
+        # Apply the saved theme
+        self.apply_theme(self.current_theme)
         
         # Set up the central widget
         self.central_widget = QWidget()
@@ -169,6 +175,32 @@ class MainWindow(QMainWindow):
             if lang_code == self.current_language:
                 action.setChecked(True)
         
+        # Theme menu
+        theme_menu = menubar.addMenu(t('theme_menu', self.current_language))
+        
+        # Create a theme group for exclusive selection
+        self.theme_group = QActionGroup(self)
+        self.theme_group.setExclusive(True)
+        
+        # Available themes
+        themes = [
+            (t('system_theme', self.current_language), 'system'),
+            (t('light_theme', self.current_language), 'light'),
+            (t('dark_theme', self.current_language), 'dark')
+        ]
+        
+        # Add theme options
+        for theme_name, theme_id in themes:
+            action = QAction(theme_name, self, checkable=True)
+            action.setData(theme_id)
+            action.triggered.connect(lambda checked, t=theme_id: self.change_theme(t))
+            theme_menu.addAction(action)
+            self.theme_group.addAction(action)
+            
+            # Check the current theme
+            if theme_id == self.current_theme:
+                action.setChecked(True)
+        
         # Help menu
         help_menu = menubar.addMenu(t('help_menu', self.current_language))
         
@@ -200,7 +232,125 @@ class MainWindow(QMainWindow):
     
     def show_sponsor(self):
         from script.sponsor import Sponsor
-        Sponsor.show_sponsor(self, self.current_language)
+        Sponsor.show_sponsor(parent=self, lang=self.current_language)
+        
+    def change_theme(self, theme_id):
+        """Change the application theme.
+        
+        Args:
+            theme_id (str): The theme to apply ('system', 'light', or 'dark')
+        """
+        self.current_theme = theme_id
+        self.settings.setValue("theme", theme_id)
+        self.apply_theme(theme_id)
+    
+    def apply_theme(self, theme_id):
+        """Apply the specified theme to the application.
+        
+        Args:
+            theme_id (str): The theme to apply ('system', 'light', or 'dark')
+        """
+        # Determine which palette to use
+        if theme_id == 'dark' or (theme_id == 'system' and self.is_dark_system_theme()):
+            self.set_dark_theme()
+        else:
+            self.set_light_theme()
+    
+    def is_dark_system_theme(self):
+        """Check if the system is using a dark theme.
+        
+        Returns:
+            bool: True if the system is using a dark theme, False otherwise
+        """
+        # Try to detect system dark mode
+        try:
+            import ctypes
+            if hasattr(ctypes, 'windll'):  # Windows
+                # This checks the Windows 10/11 theme setting
+                try:
+                    import winreg
+                    registry = winreg.ConnectRegistry(None, winreg.HKEY_CURRENT_USER)
+                    key = winreg.OpenKey(registry, r'SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize')
+                    value = winreg.QueryValueEx(key, 'AppsUseLightTheme')[0]
+                    return value == 0
+                except (WindowsError, OSError):
+                    return False
+            # Add detection for other platforms here if needed
+        except Exception as e:
+            logger.warning(f"Could not detect system theme: {e}")
+            return False
+        
+        return False
+    
+    def set_dark_theme(self):
+        """Apply a dark theme to the application."""
+        # Set the Fusion style for consistent theming across platforms
+        app = QApplication.instance()
+        app.setStyle('Fusion')
+        
+        # Create a dark palette
+        dark_palette = app.palette()
+        
+        # Base colors
+        dark_palette.setColor(dark_palette.Window, QColor(53, 53, 53))
+        dark_palette.setColor(dark_palette.WindowText, Qt.white)
+        dark_palette.setColor(dark_palette.Base, QColor(35, 35, 35))
+        dark_palette.setColor(dark_palette.AlternateBase, QColor(53, 53, 53))
+        dark_palette.setColor(dark_palette.ToolTipBase, Qt.white)
+        dark_palette.setColor(dark_palette.ToolTipText, Qt.white)
+        dark_palette.setColor(dark_palette.Text, Qt.white)
+        dark_palette.setColor(dark_palette.Button, QColor(53, 53, 53))
+        dark_palette.setColor(dark_palette.ButtonText, Qt.white)
+        dark_palette.setColor(dark_palette.BrightText, Qt.red)
+        dark_palette.setColor(dark_palette.Link, QColor(42, 130, 218))
+        dark_palette.setColor(dark_palette.Highlight, QColor(42, 130, 218))
+        dark_palette.setColor(dark_palette.HighlightedText, Qt.white)
+        
+        # Disabled colors
+        dark_palette.setColor(dark_palette.Disabled, dark_palette.Text, QColor(127, 127, 127))
+        dark_palette.setColor(dark_palette.Disabled, dark_palette.ButtonText, QColor(127, 127, 127))
+        
+        # Apply the palette
+        app.setPalette(dark_palette)
+        
+        # Update style to ensure the theme is applied
+        app.setStyleSheet("""
+            QToolTip { 
+                color: #ffffff; 
+                background-color: #2a82da; 
+                border: 1px solid white; 
+            }
+            QMenu::item:selected { 
+                background-color: #2a82da; 
+            }
+            QTabBar::tab:selected { 
+                background: #2a82da; 
+                color: white; 
+            }
+        """)
+    
+    def set_light_theme(self):
+        """Apply a light theme to the application."""
+        # Set the Fusion style for consistent theming across platforms
+        app = QApplication.instance()
+        app.setStyle('Fusion')
+        
+        # Reset to default palette
+        app.setPalette(app.style().standardPalette())
+        
+        # Update style to ensure the theme is applied
+        app.setStyleSheet("""
+            QToolTip { 
+                border: 1px solid #2a82da; 
+                padding: 2px; 
+                border-radius: 3px; 
+                opacity: 240; 
+            }
+            QMenu::item:selected { 
+                background-color: #2a82da; 
+                color: white;
+            }
+        """)
     
     def change_language(self, lang_code=None):
         """Change the application language and update the UI immediately."""

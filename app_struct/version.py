@@ -8,7 +8,7 @@ for the Nidec Commander CDE project.
 # Version information follows Semantic Versioning 2.0.0 (https://semver.org/)
 VERSION_MAJOR = 0
 VERSION_MINOR = 0  # Added improved update system and documentation
-VERSION_PATCH = 2  # Additional version qualifiers
+VERSION_PATCH = 3  # Additional version qualifiers
 VERSION_QUALIFIER = ''  # Could be 'alpha', 'beta', 'rc', or ''
 
 def get_version():

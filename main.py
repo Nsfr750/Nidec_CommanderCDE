@@ -38,6 +38,17 @@ from PyQt5.QtWidgets import (
     QSpinBox, QFileDialog, QStatusBar, QTableWidget, QTableWidgetItem, 
     QHeaderView, QGridLayout
 )
+
+# Suppress PyQt5.sip deprecation warning
+import warnings
+# Try importing sip in a way that works with different PyQt5 versions
+try:
+    import PyQt5.sip as sip
+    if hasattr(sip, 'setapi'):
+        warnings.filterwarnings("ignore", category=DeprecationWarning, module='PyQt5.sip')
+except (ImportError, AttributeError):
+    # If sip import fails, the warning suppression isn't critical
+    pass
 from PyQt5.QtGui import QIcon
 
 # Modbus communication
@@ -80,9 +91,11 @@ class NidecCommanderGUI(MainWindow):
         self.client = None
         self.connected = False
         self.current_model = "CDE400"
-        self.current_language = 'en'  # Default language
         self.model_config = get_model_config(self.current_model, self.current_language)
         self.settings = QSettings("NidecCommander", "CDE_Control")
+        
+        # Connect language change signal to update UI
+        self.languageChanged = self.language_changed
         
         # Data logging attributes
         self.logging_enabled = False
@@ -303,16 +316,66 @@ class NidecCommanderGUI(MainWindow):
         self.connection_group.setLayout(layout)
     
     def setup_dashboard_metrics_tab(self):
-        """Set up the dashboard metrics tab."""
+        """Set up the dashboard metrics tab with comprehensive monitoring."""
         dashboard_metrics_tab = QWidget()
         layout = QVBoxLayout(dashboard_metrics_tab)
         
-        # Add your dashboard metrics widgets here
-        metrics_label = QLabel("Metriche del cruscotto")
-        layout.addWidget(metrics_label)
+        # Main grid for metrics
+        metrics_grid = QGridLayout()
         
-        # Add more dashboard widgets as needed
+        # Speed Metrics Group
+        speed_group = QGroupBox(t('speed_metrics', self.current_language))
+        speed_layout = QFormLayout()
         
+        self.output_freq_label = QLabel("0.0 Hz")
+        self.output_rpm_label = QLabel("0 RPM")
+        self.setpoint_freq_label = QLabel("0.0 Hz")
+        
+        speed_layout.addRow(f"{t('output_frequency', self.current_language)}:", self.output_freq_label)
+        speed_layout.addRow(f"{t('output_speed', self.current_language)}:", self.output_rpm_label)
+        speed_layout.addRow(f"{t('setpoint_frequency', self.current_language)}:", self.setpoint_freq_label)
+        speed_group.setLayout(speed_layout)
+        
+        # Power Metrics Group
+        power_group = QGroupBox(t('power_metrics', self.current_language))
+        power_layout = QFormLayout()
+        
+        self.output_current_label = QLabel("0.0 A")
+        self.dc_bus_voltage_label = QLabel("0.0 V")
+        self.output_voltage_label = QLabel("0.0 V")
+        self.output_power_label = QLabel("0.0 kW")
+        
+        power_layout.addRow(f"{t('output_current', self.current_language)}:", self.output_current_label)
+        power_layout.addRow(f"{t('dc_bus_voltage', self.current_language)}:", self.dc_bus_voltage_label)
+        power_layout.addRow(f"{t('output_voltage', self.current_language)}:", self.output_voltage_label)
+        power_layout.addRow(f"{t('output_power', self.current_language)}:", self.output_power_label)
+        power_group.setLayout(power_layout)
+        
+        # Status Group
+        status_group = QGroupBox(t('status', self.current_language))
+        status_layout = QFormLayout()
+        
+        self.drive_status_label = QLabel(t('stopped', self.current_language))
+        self.direction_label = QLabel(t('stopped', self.current_language))
+        self.temperature_label = QLabel("0.0 °C")
+        self.run_time_label = QLabel("00:00:00")
+        
+        status_layout.addRow(f"{t('drive_status', self.current_language)}:", self.drive_status_label)
+        status_layout.addRow(f"{t('direction', self.current_language)}:", self.direction_label)
+        status_layout.addRow(f"{t('temperature', self.current_language)}:", self.temperature_label)
+        status_layout.addRow(f"{t('run_time', self.current_language)}:", self.run_time_label)
+        status_group.setLayout(status_layout)
+        
+        # Add groups to the grid
+        metrics_grid.addWidget(speed_group, 0, 0)
+        metrics_grid.addWidget(power_group, 0, 1)
+        metrics_grid.addWidget(status_group, 1, 0, 1, 2)
+        
+        # Add stretch to push everything to the top
+        layout.addLayout(metrics_grid)
+        layout.addStretch()
+        
+        # Add the tab with translated name
         self.tabs.addTab(dashboard_metrics_tab, t('dashboard', self.current_language))
     
     def setup_dashboard_tab(self):
@@ -802,71 +865,168 @@ class NidecCommanderGUI(MainWindow):
     def update_dashboard(self):
         """Update the dashboard with current drive metrics."""
         if not self.connected or not self.client:
-            if hasattr(self, 'status_value'):
-                self.status_value.setText(t('disconnected', self.current_language))
-            if hasattr(self, 'fault_value'):
-                self.fault_value.setText(t('not_available', self.current_language))
+            self._set_disconnected_state()
             return
             
         try:
-            # Read speed (RPM)
-            speed = self.client.read_holding_registers(0x1000, 1)
-            if not speed.isError():
-                self.speed_value.setText(f"{speed.registers[0]} {t('rpm', self.current_language)}")
-                
-            # Read current and voltage
-            current = self.client.read_holding_registers(0x2000, 1)
-            voltage = self.client.read_holding_registers(0x2001, 1)
+            # Read multiple parameters in one request for efficiency
+            # Read parameters from 0x2002 (output frequency) to 0x2006 (fault code)
+            response = self.client.read_holding_registers(address=0x2002, count=5, unit=1)
+            if response.isError() or len(response.registers) < 4:
+                raise Exception("Failed to read drive parameters")
             
-            if not current.isError():
-                current_val = current.registers[0] / 10.0
-                self.current_value.setText(f"{current_val:.1f} A")
-                
-            if not voltage.isError():
-                voltage_val = voltage.registers[0] / 10.0
-                self.voltage_value.setText(f"{voltage_val:.1f} V")
-                
-                # Calculate power if both current and voltage are available
-                if not current.isError():
-                    power = current_val * voltage_val
-                    self.power_value.setText(f"{power:.1f} W")
+            # Extract values from response
+            freq_reg, current_reg, voltage_reg, status_reg = response.registers[:4]
+            fault_code = response.registers[4] if len(response.registers) > 4 else None
             
-            # Read status and fault codes
-            status = self.client.read_holding_registers(0x3000, 1)
-            if not status.isError():
-                status_code = status.registers[0]
-                self.status_value.setText(t('running' if status_code == 1 else 'stopped', self.current_language))
-                
-                # Check for faults (simplified)
-                if status_code & 0x8000:
-                    self.fault_value.setText(t('fault_detected', self.current_language))
-                else:
-                    self.fault_value.setText(t('no_fault', self.current_language))
+            # Update Speed Metrics
+            freq_hz = freq_reg / 100.0  # 0.01 Hz units
+            rpm = int(freq_hz * 60)  # Convert Hz to RPM (assuming 1 pole pair)
+            self.output_freq_label.setText(f"{freq_hz:.2f} Hz")
+            self.output_rpm_label.setText(f"{rpm} {t('rpm', self.current_language)}")
             
-            # Read temperature
-            temp = self.client.read_holding_registers(0x4000, 1)
-            if not temp.isError():
-                self.temp_value.setText(f"{temp.registers[0]}°C")
-                
+            # Read setpoint frequency from a different register
+            setpoint_response = self.client.read_holding_registers(address=0x2001, count=1, unit=1)
+            if not setpoint_response.isError():
+                setpoint_hz = setpoint_response.registers[0] / 100.0  # 0.01 Hz units
+                self.setpoint_freq_label.setText(f"{setpoint_hz:.2f} Hz")
+            
+            # Update Power Metrics
+            current_a = current_reg / 10.0  # 0.1 A units
+            voltage_v = voltage_reg / 10.0  # 0.1 V units
+            power_kw = (current_a * voltage_v) / 1000.0  # Convert to kW
+            
+            self.output_current_label.setText(f"{current_a:.1f} A")
+            self.dc_bus_voltage_label.setText(f"{voltage_v:.1f} V")
+            self.output_voltage_label.setText(f"{voltage_v:.1f} V")  # Assuming same as bus voltage
+            self.output_power_label.setText(f"{power_kw:.2f} kW")
+            
+            # Update Status Group
+            status_bits = status_reg
+            status_text = []
+            direction_text = t('stopped', self.current_language)
+            
+            if status_bits & 0x0001:  # Running
+                status_text.append(t('running', self.current_language))
+            if status_bits & 0x0002:  # Forward
+                direction_text = t('forward', self.current_language)
+            if status_bits & 0x0004:  # Reverse
+                direction_text = t('reverse', self.current_language)
+            if status_bits & 0x0008:  # Fault
+                status_text.append(t('fault', self.current_language))
+            
+            status_str = ", ".join(status_text) if status_text else t('stopped', self.current_language)
+            self.drive_status_label.setText(status_str)
+            self.direction_label.setText(direction_text)
+            
+            # Read and update temperature
+            temp_response = self.client.read_holding_registers(address=0x2010, count=1, unit=1)
+            if not temp_response.isError():
+                temp_c = temp_response.registers[0] / 10.0  # 0.1°C units
+                self.temperature_label.setText(f"{temp_c:.1f} °C")
+            
+            # Update run time (example implementation)
+            if hasattr(self, 'start_time'):
+                run_seconds = int(time.time() - self.start_time)
+                hours = run_seconds // 3600
+                minutes = (run_seconds % 3600) // 60
+                seconds = run_seconds % 60
+                self.run_time_label.setText(f"{hours:02d}:{minutes:02d}:{seconds:02d}")
+            
         except Exception as e:
-            print(f"Error updating dashboard: {e}")
+            print(f"Dashboard update error: {str(e)}")
+            self._set_disconnected_state()
     
-    # Logging and Configuration Methods
+    def _set_disconnected_state(self):
+        """Set all dashboard fields to indicate disconnected state."""
+        disconnected_text = t('disconnected', self.current_language)
+        na_text = t('not_available', self.current_language)
+        
+        # Speed Metrics
+        self.output_freq_label.setText(na_text)
+        self.output_rpm_label.setText(na_text)
+        self.setpoint_freq_label.setText(na_text)
+        
+        # Power Metrics
+        self.output_current_label.setText(na_text)
+        self.dc_bus_voltage_label.setText(na_text)
+        self.output_voltage_label.setText(na_text)
+        self.output_power_label.setText(na_text)
+        
+        # Status Group
+        self.drive_status_label.setText(disconnected_text)
+        self.direction_label.setText(disconnected_text)
+        self.temperature_label.setText(na_text)
+        self.run_time_label.setText("00:00:00")
+        
+    def retranslate_ui(self):
+        """Retranslate all UI elements with the current language."""
+        # Call parent's retranslate_ui first to update menu and other common elements
+        super().retranslate_ui()
+        
+        # Update dashboard metrics tab
+        if hasattr(self, 'dashboard_metrics_tab'):
+            # Update group box titles
+            for group in self.dashboard_metrics_tab.findChildren(QGroupBox):
+                if group.title() == t('speed_metrics', 'en'):
+                    group.setTitle(t('speed_metrics', self.current_language))
+                elif group.title() == t('power_metrics', 'en'):
+                    group.setTitle(t('power_metrics', self.current_language))
+                elif group.title() == t('status', 'en'):
+                    group.setTitle(t('status', self.current_language))
+            
+            # Update labels in the form layouts
+            for form in self.dashboard_metrics_tab.findChildren(QFormLayout):
+                for i in range(form.rowCount()):
+                    label_item = form.itemAt(i, QFormLayout.LabelRole)
+                    if label_item and label_item.widget():
+                        label = label_item.widget().text()
+                        if ':' in label:
+                            # Extract the translation key (remove ':' and any whitespace)
+                            key = label.split(':')[0].strip()
+                            if key in TRANSLATIONS.get('en', {}):
+                                # Update the label with the translated text
+                                label_item.widget().setText(f"{t(key, self.current_language)}:")
+        
+        # Update other UI elements as needed
+        if hasattr(self, 'tabs'):
+            for i in range(self.tabs.count()):
+                tab_text = self.tabs.tabText(i)
+                if tab_text in [t('control', 'en'), t('diagnostics', 'en'), 
+                              t('parameters', 'en'), t('dashboard', 'en')]:
+                    # This is one of our main tabs
+                    if tab_text == t('control', 'en'):
+                        self.tabs.setTabText(i, t('control', self.current_language))
+                    elif tab_text == t('diagnostics', 'en'):
+                        self.tabs.setTabText(i, t('diagnostics', self.current_language))
+                    elif tab_text == t('parameters', 'en'):
+                        self.tabs.setTabText(i, t('parameters', self.current_language))
+                    elif tab_text == t('dashboard', 'en'):
+                        self.tabs.setTabText(i, t('dashboard', self.current_language))
+    
+    def language_changed(self, lang_code):
+        """Handle language change event."""
+        self.current_language = lang_code
+        self.model_config = get_model_config(self.current_model, self.current_language)
+        self.retranslate_ui()
+        self._set_disconnected_state()
     
     def browse_log_file(self):
         """Open file dialog to select log file location"""
         file_path, _ = QFileDialog.getSaveFileName(
             self, 
             "Select Log File",
-            self.last_used_dir,
+            self.last_used_dir if hasattr(self, 'last_used_dir') else "",
             "CSV Files (*.csv);;All Files (*)"
         )
         
         if file_path:
             if not file_path.endswith('.csv'):
                 file_path += '.csv'
-            self.log_file_path.setText(file_path)
-            self.last_used_dir = os.path.dirname(file_path)
+            if hasattr(self, 'log_file_path'):
+                self.log_file_path.setText(file_path)
+            if hasattr(self, 'last_used_dir'):
+                self.last_used_dir = os.path.dirname(file_path)
     
     def update_log_interval(self, interval):
         """Update the logging interval"""

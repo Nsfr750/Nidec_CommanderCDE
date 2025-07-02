@@ -35,8 +35,8 @@ A comprehensive Python GUI application for controlling and monitoring Nidec Comm
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/Nsfr750/nidec-commander-cde.git
-   cd nidec-commander-cde
+   git clone https://github.com/Nsfr750/nidec-commandercde.git
+   cd nidec-commandercde
    ```
 
 2. Create and activate a virtual environment (recommended):

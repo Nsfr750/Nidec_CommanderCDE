@@ -3,15 +3,15 @@
 ## [Unreleased]
 
 ### Features
-- Multi-language support with 11 supported languages
-- Status bar with real-time drive information
 - Dark/Light theme support
-- Comprehensive help system with localized content
-- Sponsor dialog with support options
 
 ## [0.0.2] - 2025-07-02
 
 ### Features
+- Multi-language support with 11 supported languages
+- Status bar with real-time drive information
+- Comprehensive help system with localized content
+- Sponsor dialog with support options
 - Basic drive control functionality
 - Parameter monitoring and adjustment
 - Fault detection and reset

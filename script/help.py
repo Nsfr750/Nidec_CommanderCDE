@@ -10,6 +10,11 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
+# Add script directory to Python path
+script_dir = os.path.join(project_root, 'script')
+if script_dir not in sys.path:
+    sys.path.insert(0, script_dir)
+
 from lang.translations import TRANSLATIONS, t
 
 class HelpWindow(QDialog):

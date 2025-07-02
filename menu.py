@@ -25,11 +25,15 @@ import os
 import json
 import logging
 from pathlib import Path
-from typing import Optional, Dict, Any
 
 # Add the script directory to the Python path
 script_dir = Path(__file__).parent / 'script'
 sys.path.insert(0, str(script_dir))
+
+# Add the project root to the Python path
+project_root = Path(__file__).parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 # PyQt6 imports
 from PyQt6.QtWidgets import (
@@ -40,10 +44,10 @@ from PyQt6.QtGui import QCloseEvent, QColor, QPalette, QAction, QKeySequence, QA
 from PyQt6.QtCore import Qt, QSettings, QObject, pyqtSignal
 
 # Local application imports
-from help import HelpWindow
-from about import About
-from sponsor import Sponsor
-from updates import check_for_updates
+from script.help import HelpWindow
+from script.about import About
+from script.sponsor import Sponsor
+from script.updates import check_for_updates
 
 # Import translations
 from lang.translations import TRANSLATIONS, t
@@ -291,25 +295,41 @@ class MainWindow(QMainWindow):
         # Create a dark palette
         dark_palette = app.palette()
         
-        # Base colors
-        dark_palette.setColor(QPalette.ColorRole.Window, QColor(53, 53, 53))
-        dark_palette.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.white)
-        dark_palette.setColor(QPalette.ColorRole.Base, QColor(35, 35, 35))
-        dark_palette.setColor(QPalette.ColorRole.AlternateBase, QColor(53, 53, 53))
-        dark_palette.setColor(QPalette.ColorRole.ToolTipBase, Qt.GlobalColor.white)
-        dark_palette.setColor(QPalette.ColorRole.ToolTipText, Qt.GlobalColor.white)
-        dark_palette.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.white)
-        dark_palette.setColor(QPalette.ColorRole.Button, QColor(53, 53, 53))
-        dark_palette.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.white)
-        dark_palette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
-        dark_palette.setColor(QPalette.ColorRole.Link, QColor(42, 130, 218))
-        dark_palette.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
-        dark_palette.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.white)
+        # Base colors - using PyQt6 color roles
+        dark_palette.setColor(dark_palette.ColorGroup.Active, dark_palette.ColorRole.Window, QColor(53, 53, 53))
+        dark_palette.setColor(dark_palette.ColorGroup.Active, dark_palette.ColorRole.WindowText, Qt.GlobalColor.white)
+        dark_palette.setColor(dark_palette.ColorGroup.Active, dark_palette.ColorRole.Base, QColor(35, 35, 35))
+        dark_palette.setColor(dark_palette.ColorGroup.Active, dark_palette.ColorRole.AlternateBase, QColor(53, 53, 53))
+        dark_palette.setColor(dark_palette.ColorGroup.Active, dark_palette.ColorRole.ToolTipBase, Qt.GlobalColor.white)
+        dark_palette.setColor(dark_palette.ColorGroup.Active, dark_palette.ColorRole.ToolTipText, Qt.GlobalColor.white)
+        dark_palette.setColor(dark_palette.ColorGroup.Active, dark_palette.ColorRole.Text, Qt.GlobalColor.white)
+        dark_palette.setColor(dark_palette.ColorGroup.Active, dark_palette.ColorRole.Button, QColor(53, 53, 53))
+        dark_palette.setColor(dark_palette.ColorGroup.Active, dark_palette.ColorRole.ButtonText, Qt.GlobalColor.white)
+        dark_palette.setColor(dark_palette.ColorGroup.Active, dark_palette.ColorRole.BrightText, Qt.GlobalColor.red)
+        dark_palette.setColor(dark_palette.ColorGroup.Active, dark_palette.ColorRole.Link, QColor(42, 130, 218))
+        dark_palette.setColor(dark_palette.ColorGroup.Active, dark_palette.ColorRole.Highlight, QColor(42, 130, 218))
+        dark_palette.setColor(dark_palette.ColorGroup.Active, dark_palette.ColorRole.HighlightedText, Qt.GlobalColor.white)
+        
+        # Apply the same colors to Inactive and Disabled states
+        for group in [dark_palette.ColorGroup.Inactive, dark_palette.ColorGroup.Disabled]:
+            dark_palette.setColor(group, dark_palette.ColorRole.Window, QColor(53, 53, 53))
+            dark_palette.setColor(group, dark_palette.ColorRole.WindowText, Qt.GlobalColor.gray)
+            dark_palette.setColor(group, dark_palette.ColorRole.Base, QColor(35, 35, 35))
+            dark_palette.setColor(group, dark_palette.ColorRole.AlternateBase, QColor(53, 53, 53))
+            dark_palette.setColor(group, dark_palette.ColorRole.ToolTipBase, Qt.GlobalColor.white)
+            dark_palette.setColor(group, dark_palette.ColorRole.ToolTipText, Qt.GlobalColor.white)
+            dark_palette.setColor(group, dark_palette.ColorRole.Text, Qt.GlobalColor.gray)
+            dark_palette.setColor(group, dark_palette.ColorRole.Button, QColor(53, 53, 53))
+            dark_palette.setColor(group, dark_palette.ColorRole.ButtonText, Qt.GlobalColor.gray)
+            dark_palette.setColor(group, dark_palette.ColorRole.BrightText, Qt.GlobalColor.red)
+            dark_palette.setColor(group, dark_palette.ColorRole.Link, QColor(42, 130, 218))
+            dark_palette.setColor(group, dark_palette.ColorRole.Highlight, QColor(42, 130, 218))
+            dark_palette.setColor(group, dark_palette.ColorRole.HighlightedText, Qt.GlobalColor.white)
         
         # Apply the palette
         app.setPalette(dark_palette)
         
-        # Set the style sheet for additional theming
+        # Apply additional styling
         app.setStyleSheet("""
             QToolTip {
                 color: #ffffff;

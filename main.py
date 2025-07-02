@@ -1,7 +1,7 @@
 """
-Nidec Commander CDE - Main Application Module
+Nidec CommanderCDE - Main Application Module
 
-This module serves as the main entry point for the Nidec Commander CDE application.
+This module serves as the main entry point for the Nidec CommanderCDE application.
 It provides a graphical user interface for controlling and monitoring Nidec motor drives.
 
 Key Features:
@@ -13,21 +13,26 @@ Key Features:
 - Data logging and export
 
 Dependencies:
-- PyQt5: For the graphical user interface
+- PyQt6: For the graphical user interface
 - pymodbus: For Modbus RTU communication
 - serial: For serial port management
 
-Author: [Your Name]
-Version: 1.0.0
+Author: Nsfr750
+Version: 0.0.4
 """
 
 import sys
-import json
 import os
+import json
 import csv
 import time
 from datetime import datetime
 import serial.tools.list_ports
+from pathlib import Path
+
+# Add the script directory to the Python path
+script_dir = Path(__file__).parent / 'script'
+sys.path.insert(0, str(script_dir))
 
 # PyQt6 imports for GUI components
 from PyQt6.QtCore import QTimer, QSettings, QDateTime, Qt

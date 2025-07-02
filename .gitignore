@@ -180,3 +180,5 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 CDE.bat
+CommanderCDE.exe
+/main.dist

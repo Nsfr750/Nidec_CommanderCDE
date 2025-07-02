@@ -1,6 +1,6 @@
 # Nidec CommanderCDE 
 
-[![GitHub release](https://img.shields.io/badge/release-v0.0.3-green.svg?style=for-the-badge)](https://github.com/Nsfr750/Nidec_CommanderCDE/releases/latest)
+[![GitHub release](https://img.shields.io/badge/release-v0.0.4-green.svg?style=for-the-badge)](https://github.com/Nsfr750/Nidec_CommanderCDE/releases/latest)
 [![Python Version](https://img.shields.io/badge/python-3.8+-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg?style=for-the-badge)](https://github.com/Nsfr750/Nidec_CommanderCDE/graphs/commit-activity)
@@ -14,13 +14,15 @@ A comprehensive Python GUI application for controlling and monitoring Nidec Comm
 
 ## ✨ Features
 
-- **Multi-language Support**: Interface available in multiple languages (English, Italian, Spanish, Portuguese, German, French, Dutch, Russian, Chinese, Japanese, Arabic)
+- **Multi-language Support**: Complete interface in English and Italian with dynamic language switching
+- **Multi-Model Support**: Compatible with CDE400, CDE550, CDE750, and CDE1100S drive models
 - **Drive Control**:
   - Connect to Nidec Commander CDE drives via RS-485/Modbus RTU
   - Control motor speed and direction
   - Start/Stop the drive
   - Real-time monitoring of drive status and diagnostics
   - Fault detection and reset functionality
+  - Parameter backup and restore
 - **User Interface**:
   - Modern, tabbed interface with intuitive controls
   - Comprehensive dashboard with real-time metrics
@@ -38,23 +40,28 @@ A comprehensive Python GUI application for controlling and monitoring Nidec Comm
   - System status indicators
   - Real-time performance metrics
 
-## 🆕 What's New in v0.0.3
+## 🆕 What's New in v0.0.4
 
-- Enhanced dashboard with comprehensive metrics
-- Improved language switching functionality
-- Added real-time parameter monitoring
-- Added connection status indicators
-- Improved UI responsiveness
-- Fixed PyQt5.sip compatibility issues
-- Added support for custom themes (Dark/Light mode)
+### New Features
+- Added support for multiple Nidec drive models (CDE400, CDE550, CDE750, CDE1100S)
+- Complete Italian translations for all UI elements
+- Enhanced help system with detailed documentation
+- Blue theme for better readability in help sections
+
+### Improvements
+- Updated UI for better user experience
+- Improved error messages and logging
+- Optimized performance for real-time monitoring
+- Resolved PyQt6 compatibility issues
+- Fixed language switching in help dialogs
 
 ## 🚀 Requirements
 
 - Python 3.8 or higher
-- PyQt5 >= 5.15.9
+- PyQt6 >= 6.6.1
 - pyserial >= 3.5
 - pymodbus >= 3.5.4
-- QScintilla >= 2.14.1
+- PyQt6-QScintilla >= 2.14.1
 - python-dotenv >= 1.0.0
 
 ## 🛠 Installation & Setup

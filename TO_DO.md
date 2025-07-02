@@ -1,4 +1,4 @@
-﻿# Nidec Commander CDE - Development Roadmap
+# Nidec Commander CDE - Development Roadmap
 
 ## 🚀 Upcoming Features
 
@@ -7,12 +7,15 @@
 - [x] Implement data logging to CSV/Excel
 - [x] Add graph visualization for real-time parameters
 - [x] Create a dashboard with key metrics
-- [ ] Add support for saving and loading drive configurations
+- [x] Add support for saving and loading drive configurations
+- [ ] Implement parameter backup/restore functionality
+- [ ] Add support for custom parameter presets
 
 ### Medium Priority
 
 - [ ] Implement automatic firmware updates
 - [x] Add support for custom themes (Dark/Light mode)
+- [ ] Implement advanced diagnostics
 
 ### Low Priority
 
@@ -35,21 +38,22 @@
 ## 🔧 Technical Debt
 
 - [ ] Refactor code for better maintainability
-- [ ] Improve test coverage
 - [ ] Optimize resource usage
-- [ ] Fix PyQt5.sip deprecation warnings
 
 ## 🌟 Feature Requests
 
 - [From Users] Add support for custom parameter groups
-- [From Users] Implement batch processing of commands
 - [From Users] Add support for scriptable automation
 - [From Users] Add more detailed drive diagnostics
 
-## ✅ Recently Completed
+## ✅ Recently Completed (v0.0.4)
 
-- Enhanced dashboard with comprehensive metrics
-- Improved language switching functionality
+- Added support for multiple Nidec drive models (CDE400, CDE550, CDE750, CDE1100S)
+- Completed Italian translations for all UI elements
+- Enhanced help system with detailed documentation
+- Improved UI with better theming and readability
+- Fixed PyQt6 compatibility issues
+- Optimized real-time monitoring performance
 - Added real-time parameter monitoring
 - Added connection status indicators
 - Improved UI responsiveness

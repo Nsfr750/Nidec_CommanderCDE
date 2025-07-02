@@ -4,11 +4,26 @@
 
 ### Upcoming Features
 
-- Enhanced dashboard with comprehensive metrics
-- Improved language switching functionality
-- Added support for real-time parameter monitoring
-- Added connection status indicators
-- Improved error handling and user feedback
+- Implement parameter backup/restore functionality
+- Add support for custom parameter presets
+
+## [0.0.4] - 2025-07-02
+
+### Added
+- Support for multiple Nidec drive models (CDE400, CDE550, CDE750, CDE1100S)
+- Complete Italian translations for all UI elements
+- Enhanced help system with detailed documentation
+- Blue theme for better readability in help sections
+
+### Changed
+- Updated UI for better user experience
+- Improved error messages and logging
+- Optimized performance for real-time monitoring
+
+### Fixed
+- Resolved issues with PyQt6 compatibility
+- Fixed language switching in help dialogs
+- Corrected alignment and styling issues
 
 ## [0.0.3] - 2025-07-02
 
@@ -21,7 +36,7 @@
 
 ### Version 0.0.2 Features
 
-- Multi-language support with 11 supported languages
+- Multi-language support (English/Italian)
 - Status bar with real-time drive information
 - Comprehensive help system with localized content
 - Sponsor dialog with support options

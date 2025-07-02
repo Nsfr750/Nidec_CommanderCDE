@@ -12,14 +12,31 @@ A comprehensive Python GUI application for controlling and monitoring Nidec Comm
   - Real-time monitoring of drive status and diagnostics
   - Fault detection and reset functionality
 - **User Interface**:
-  - Modern, tabbed interface
-  - Status bar with real-time information
-  - Responsive design
-  - Dark/Light theme support
+  - Modern, tabbed interface with intuitive controls
+  - Comprehensive dashboard with real-time metrics
+  - Status bar with connection and drive status
+  - Responsive design with Dark/Light theme support
+  - Customizable interface elements
+- **Data Management**:
+  - Real-time monitoring and logging of drive parameters
+  - Data export to CSV/Excel
+  - Graph visualization for parameter trends
+  - Configurable data logging intervals
 - **Diagnostics**:
-  - Real-time monitoring of drive parameters
+  - Comprehensive parameter monitoring
   - Fault history and logging
   - System status indicators
+  - Real-time performance metrics
+
+## 🆕 What's New in v0.0.3
+
+- Enhanced dashboard with comprehensive metrics
+- Improved language switching functionality
+- Added real-time parameter monitoring
+- Added connection status indicators
+- Improved UI responsiveness
+- Fixed PyQt5.sip compatibility issues
+- Added support for custom themes (Dark/Light mode)
 
 ## 🚀 Requirements
 
@@ -30,7 +47,7 @@ A comprehensive Python GUI application for controlling and monitoring Nidec Comm
 - QScintilla >= 2.14.1
 - python-dotenv >= 1.0.0
 
-## 🛠 Installation
+## 🛠 Installation & Setup
 
 1. Clone the repository:
 
@@ -55,10 +72,9 @@ A comprehensive Python GUI application for controlling and monitoring Nidec Comm
    pip install -r requirements.txt
    ```
 
-## 🚦 Quick Start
+## 🚀 Basic Usage
 
 1. Connect your Nidec Commander CDE drive to your computer via RS-485 adapter
-
 2. Launch the application:
 
    ```bash
@@ -67,32 +83,6 @@ A comprehensive Python GUI application for controlling and monitoring Nidec Comm
 
 3. Select the appropriate COM port and baud rate
 4. Click 'Connect' to establish communication with the drive
-
-## 📝 License
-
-This project is licensed under the GPL3 License - see the [LICENSE](LICENSE) file for details.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
-
-## Installation
-
-1. Clone this repository or download the source code
-2. Install the required packages:
-   ```
-   pip install -r requirements.txt
-   ```
-
-## Usage
-
-1. Connect your computer to the Nidec Commander CDE drive using a USB-to-RS485 converter
-2. Run the application:
-   ```
-   python main.py
-   ```
-3. Select the correct COM port from the dropdown menu
-4. Click "Connect" to establish communication with the drive
 5. Use the interface to control and monitor the drive
 
 ## Connection Settings
@@ -110,3 +100,10 @@ Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTIN
 - The default register addresses are based on typical Nidec drive configurations but may need adjustment for your specific model
 - Refer to the Nidec CDE 400 Commander manual for detailed information about parameters and register addresses
 
+## 📝 License
+
+This project is licensed under the GPL3 License - see the [LICENSE](LICENSE) file for details.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.

@@ -1,44 +1,55 @@
-# Nidec Commander CDE - Development Roadmap
+﻿# Nidec Commander CDE - Development Roadmap
 
 ## 🚀 Upcoming Features
 
 ### High Priority
+
+- [x] Implement data logging to CSV/Excel
+- [x] Add graph visualization for real-time parameters
+- [x] Create a dashboard with key metrics
 - [ ] Add support for saving and loading drive configurations
-- [ ] Implement data logging to CSV/Excel
-- [ ] Add graph visualization for real-time parameters
-- [ ] Create user profiles with custom settings
-- [ ] Add keyboard shortcuts for common actions
 
 ### Medium Priority
+
 - [ ] Implement automatic firmware updates
-- [ ] Add support for more Nidec drive models
-- [ ] Create a dashboard with key metrics
-- [ ] Add support for custom themes
-- [ ] Implement command history and macros
+- [x] Add support for custom themes (Dark/Light mode)
 
 ### Low Priority
+
 - [ ] Add unit tests
 - [ ] Create a user manual
 - [ ] Add support for remote monitoring
-- [ ] Implement data export to cloud storage
-- [ ] Add support for additional languages
 
 ## 🐛 Bug Fixes
-- [ ] Fix any reported issues from users
-- [ ] Improve error handling and user feedback
+
+- [x] Fix language switching issues
+- [x] Improve error handling and user feedback
 - [ ] Optimize performance for large parameter sets
 
 ## 📚 Documentation
+
+- [x] Update CHANGELOG.md
 - [ ] Update API documentation
-- [ ] Add code comments
-- [ ] Create video tutorials
+- [X] Add code comments
 
 ## 🔧 Technical Debt
+
 - [ ] Refactor code for better maintainability
 - [ ] Improve test coverage
 - [ ] Optimize resource usage
+- [ ] Fix PyQt5.sip deprecation warnings
 
 ## 🌟 Feature Requests
+
 - [From Users] Add support for custom parameter groups
 - [From Users] Implement batch processing of commands
 - [From Users] Add support for scriptable automation
+- [From Users] Add more detailed drive diagnostics
+
+## ✅ Recently Completed
+
+- Enhanced dashboard with comprehensive metrics
+- Improved language switching functionality
+- Added real-time parameter monitoring
+- Added connection status indicators
+- Improved UI responsiveness

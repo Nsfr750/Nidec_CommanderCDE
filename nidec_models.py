@@ -1,11 +1,30 @@
 """
 Nidec Commander CDE Series Models Configuration
+
+This module provides configuration and utility functions for different Nidec CDE Series
+motor drive models. It includes register mappings, model specifications, and helper
+functions for retrieving model information and fault descriptions.
+
+Key Features:
+- Centralized model configurations for different drive models
+- Register address mappings for Modbus communication
+- Fault code descriptions with multi-language support
+- Model-specific parameter limits and specifications
+
+Dependencies:
+- lang.translations: For internationalization support
+
+Author: [Your Name]
+Version: 1.0.0
 """
 
+from typing import Dict, List, Optional, Any
 from lang.translations import t
 
 # Model specifications and register mappings
-MODEL_CONFIG = {
+# This dictionary contains the complete configuration for all supported Nidec CDE drive models.
+# Each model includes specifications, register addresses, and default parameter values.
+MODEL_CONFIG: Dict[str, Dict[str, Any]] = {
     "CDE400": {
         "max_frequency": 400.0,  # Hz
         "max_current": 8.0,      # A
@@ -92,8 +111,10 @@ MODEL_CONFIG = {
     }
 }
 
-# Fault code descriptions
-FAULT_CODES = {
+# Fault code definitions with translations
+# This dictionary maps fault codes to their descriptions in multiple languages.
+# Each fault code includes a unique identifier and a translation key.
+FAULT_CODES: Dict[int, str] = {
     0x0000: 'no_fault',
     0x0001: 'overcurrent',
     0x0002: 'overvoltage',
@@ -111,34 +132,47 @@ FAULT_CODES = {
     0x000E: 'communication_error'
 }
 
-def get_fault_description(fault_code, language='en'):
+def get_fault_description(fault_code: int, language: str = 'en') -> str:
     """Get the translated description for a fault code.
     
+    This function looks up the provided fault code in the FAULT_CODES dictionary
+    and returns the corresponding translated description. If the fault code is not
+    found, it returns a default 'unknown fault' message.
+    
     Args:
-        fault_code: The fault code value
-        language: Language code (default: 'en')
+        fault_code: Integer value representing the fault code
+        language: Two-letter language code (e.g., 'en', 'it'). Defaults to 'en'.
         
     Returns:
-        str: The translated fault description
+        str: The translated fault description in the specified language.
+        
+    Example:
+        >>> get_fault_description(1, 'en')
+        'Overcurrent'
+        >>> get_fault_description(1, 'it')
+        'Sovracorrente'
     """
     if fault_code in FAULT_CODES:
         return t(FAULT_CODES[fault_code], language)
     return t('unknown_fault', language, default='Unknown Fault')
 
-def get_model_list(language='en'):
-    """Return list of available drive models with translated names
+def get_model_list(language: str = 'en') -> List[str]:
+    """Return list of available drive models with translated names.
+    
+    This function generates a list of all supported drive models with their
+    identifiers and display names in the specified language.
     
     Args:
-        language: Language code (default: 'en')
+        language: Two-letter language code (e.g., 'en', 'it'). Defaults to 'en'.
         
     Returns:
-        list: List of model names
+        List[str]: A list of model names
     """
     return [
         'CDE400', 'CDE550', 'CDE750', 'CDE1100S'
     ]
-    
-def get_model_display_name(model, language='en'):
+
+def get_model_display_name(model: str, language: str = 'en') -> str:
     """Get the display name for a model
     
     Args:
@@ -150,18 +184,49 @@ def get_model_display_name(model, language='en'):
     """
     return model  # Models don't need translation as they are product codes
 
-def get_model_config(model, language='en'):
-    """Get configuration for a specific model
+def get_model_config(model: str, language: str = 'en') -> Dict[str, Any]:
+    """Get complete configuration for a specific drive model.
+    
+    This function retrieves the configuration for a specified model and localizes
+    all translatable strings to the requested language. The configuration includes
+    specifications, register mappings, and parameter definitions.
     
     Args:
-        model: Model identifier (e.g., 'CDE400')
-        language: Language code (default: 'en')
+        model: The model identifier (e.g., 'CDE400')
+        language: Two-letter language code (e.g., 'en', 'it'). Defaults to 'en'.
         
     Returns:
-        dict: Model configuration with translated strings
+        Dict[str, Any]: A dictionary containing the complete model configuration
+            with all strings localized to the specified language.
+            
+    Raises:
+        ValueError: If the specified model is not found in the configuration.
+        
+    Example:
+        >>> config = get_model_config('CDE400', 'en')
+        >>> config['name']
+        'CDE Series 400W'
+        >>> config['max_frequency']
+        400.0
     """
-    config = MODEL_CONFIG.get(model, MODEL_CONFIG["CDE400"]).copy()
+    if model not in MODEL_CONFIG:
+        raise ValueError(f"Unknown model: {model}")
     
+    # Create a deep copy to avoid modifying the original config
+    config = MODEL_CONFIG[model].copy()
+    
+    # Add translated model name and description
+    config['name'] = get_model_display_name(model, language)
+    config['description'] = t(f'model_{model}_description', language)
+    
+    # Translate parameter names and descriptions if they exist
+    if 'parameters' in config:
+        for param in config['parameters'].values():
+            if 'name_key' in param:
+                param['name'] = t(param['name_key'], language)
+            if 'description_key' in param:
+                param['description'] = t(param['description_key'], language)
+                
     # Translate register names in the config
     if 'registers' in config:
         translated_registers = {}

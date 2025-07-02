@@ -1,18 +1,45 @@
+"""
+Nidec Commander CDE - Main Window and Menu System
+
+This module implements the main application window with a menu bar and handles
+application-wide functionality such as language selection, help, and updates.
+
+Key Features:
+- Main application window with menu bar
+- Language selection and switching
+- Help system integration
+- About and sponsor dialogs
+- Update checking functionality
+
+Dependencies:
+- PyQt5: For GUI components
+- script/*: Helper modules for various features
+- lang.translations: For internationalization support
+
+Author: [Your Name]
+Version: 1.0.0
+"""
+
 import sys
 import os
 import json
+import logging
 from pathlib import Path
+from typing import Optional, Dict, Any
 
 # Add the script directory to the Python path
 script_dir = Path(__file__).parent / 'script'
 sys.path.insert(0, str(script_dir))
 
-from PyQt5.QtWidgets import (QMainWindow, QApplication, QMenuBar, QMenu, 
-                           QAction, QMessageBox, QWidget, QVBoxLayout, QActionGroup)
-from PyQt5.QtGui import QKeySequence
-from PyQt5.QtCore import Qt, QSettings
+# PyQt5 imports
+from PyQt5.QtWidgets import (
+    QMainWindow, QApplication, QMenuBar, QMenu, 
+    QAction, QMessageBox, QWidget, QVBoxLayout, QActionGroup
+)
+from PyQt5.QtGui import QKeySequence, QCloseEvent
+from PyQt5.QtCore import Qt, QSettings, QObject, pyqtSignal
 
-# Import the modules we need
+# Local application imports
 from help import HelpWindow
 from about import About
 from sponsor import Sponsor
@@ -21,13 +48,38 @@ from updates import check_for_updates
 # Import translations
 from lang.translations import TRANSLATIONS, t
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 class MainWindow(QMainWindow):
+    """
+    Main application window with menu bar and core functionality.
+    
+    This class represents the main window of the Nidec Commander CDE application.
+    It provides the main menu, handles language switching, and manages application
+    state and settings.
+    
+    Attributes:
+        settings: QSettings instance for persistent storage
+        current_language: Currently selected language code (e.g., 'en', 'it')
+        help_window: Reference to the help window (lazily created)
+        about_dialog: Reference to the about dialog (lazily created)
+        sponsor_dialog: Reference to the sponsor dialog (lazily created)
+    """
+    
     def __init__(self):
+        """Initialize the main window and set up the UI."""
         super().__init__()
+        
+        # Set up the main window
         self.setWindowTitle("Nidec Commander CDE")
         self.setGeometry(100, 100, 1000, 750)
         
-        # Initialize settings
+        # Initialize settings and application state
         self.settings = QSettings("NidecCommander", "CDE_Control")
         
         # Set default language if not set
@@ -224,7 +276,36 @@ class MainWindow(QMainWindow):
         Sponsor.show_sponsor(parent=self, lang=self.current_language)
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec_())
+    """
+    Entry point for the Nidec Commander CDE application.
+    
+    This block is executed when the script is run directly (not imported as a module).
+    It creates the QApplication instance and the main window, then starts the event loop.
+    """
+    try:
+        # Create the Qt application
+        app = QApplication(sys.argv)
+        
+        # Set application metadata
+        app.setApplicationName("Nidec Commander CDE")
+        app.setOrganizationName("Nidec")
+        app.setApplicationVersion("1.0.0")
+        
+        # Create and show the main window
+        window = MainWindow()
+        window.show()
+        
+        # Start the application event loop
+        sys.exit(app.exec_())
+        
+    except Exception as e:
+        # Log any unhandled exceptions
+        logger.critical("Unhandled exception in main thread", exc_info=True)
+        QMessageBox.critical(
+            None,
+            "Fatal Error",
+            f"An unexpected error occurred: {str(e)}\n\n"
+            "The application will now exit.\n\n"
+            "Please check the log file for more details."
+        )
+        sys.exit(1)

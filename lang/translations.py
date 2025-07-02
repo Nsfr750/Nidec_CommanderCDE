@@ -1,12 +1,55 @@
 """
-Languages for Nidec Commander application.
+Nidec Commander CDE - Internationalization Module
 
-This module provides a centralized Language system 
-for the Nidec Commander project.
+This module provides a comprehensive internationalization (i18n) system for the Nidec
+Commander CDE application. It includes translations for all user-facing strings in
+multiple languages, allowing the application to be easily localized for different regions.
+
+Key Features:
+- Centralized string management for all UI elements
+- Support for multiple languages (English, Italian, Spanish, etc.)
+- Simple key-based string lookup with fallback to English
+- Support for string formatting with dynamic values
+
+Usage:
+    # Get a translated string
+    from lang.translations import t
+    
+    # Basic usage
+    message = t('app_title', 'en')  # Returns 'Nidec Commander CDE'
+    
+    # With string formatting
+    message = t('welcome_message', 'en', username='Admin')  # Returns 'Welcome, Admin!'
+
+Adding a New Language:
+1. Add a new language code (e.g., 'fr' for French) to the TRANSLATIONS dictionary
+2. Provide translations for all keys in the new language
+3. Ensure all special characters are properly encoded in UTF-8
+
+Note: Always use UTF-8 encoding when editing this file to ensure proper handling
+of special characters in different languages.
+
+Author: [Your Name]
+Version: 1.0.0
 """
 
-# Default translations
-TRANSLATIONS = {
+from typing import Dict, Any, Optional
+
+# Translation dictionary
+# 
+# Structure:
+# {
+#   'language_code': {
+#       'key': 'translated_string',
+#       ...
+#   },
+#   ...
+# }
+#
+# Each language should have translations for all keys to ensure consistent UI.
+# If a translation is missing for a key in a language, the English version will be used.
+
+TRANSLATIONS: Dict[str, Dict[str, str]] = {
     'en': {
         'app_title': 'Nidec Commander CDE',
         'file_menu': 'File',
@@ -2057,26 +2100,62 @@ TRANSLATIONS = {
     },
 }
 
-def t(key, lang='en', **kwargs):
+def t(key: str, lang: str = 'en', **kwargs: Any) -> str:
     """
-    Get a translated string for the given key and language.
+    Retrieve a translated string for the given key and language.
+    
+    This function looks up the provided key in the translations dictionary for the
+    specified language. If the key is not found in the specified language, it falls
+    back to English. If the key is not found in English, it returns the key itself.
+    
+    The function also supports string formatting using Python's string format syntax.
+    Any additional keyword arguments will be used to format the translated string.
     
     Args:
-        key: The translation key
-        lang: The language code (default: 'en')
-        **kwargs: Format arguments for the translated string
+        key: The translation key to look up
+        lang: Two-letter language code (e.g., 'en', 'it'). Defaults to 'en'.
+        **kwargs: Format arguments that will be substituted into the translated string
         
     Returns:
-        The translated string
+        str: The translated and formatted string, or the original key if translation fails
+        
+    Example:
+        # Basic usage
+        >>> t('app_title', 'en')
+        'Nidec Commander CDE'
+        
+        # With string formatting
+        >>> t('welcome_message', 'en', username='Admin')
+        'Welcome, Admin!'
+        
+        # Fallback to English
+        >>> t('nonexistent_key', 'fr')
+        'nonexistent_key'
     """
     try:
-        # Get the translation
-        translation = TRANSLATIONS.get(lang, TRANSLATIONS['en']).get(key, key)
+        # Try to get the translation for the specified language
+        translation = TRANSLATIONS.get(lang, {}).get(key, '')
         
-        # Format the string if there are any arguments
+        # If not found in the specified language, try English
+        if not translation and lang != 'en':
+            translation = TRANSLATIONS.get('en', {}).get(key, key)
+            
+        # If still not found, use the key itself
+        if not translation:
+            translation = key
+            
+        # Format the string if there are any kwargs
         if kwargs:
-            return translation.format(**kwargs)
+            try:
+                return translation.format(**kwargs)
+            except (KeyError, ValueError):
+                # If formatting fails, return the unformatted string
+                return translation
+                
         return translation
+        
     except Exception as e:
-        print(f"Translation error for key '{key}': {e}")
+        # In case of any error, log the error and return the key
+        import logging
+        logging.error(f"Translation error for key '{key}' in language '{lang}': {str(e)}")
         return key

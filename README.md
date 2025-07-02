@@ -89,7 +89,7 @@ Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTIN
 1. Connect your computer to the Nidec Commander CDE drive using a USB-to-RS485 converter
 2. Run the application:
    ```
-   python nidec_commander_gui.py
+   python main.py
    ```
 3. Select the correct COM port from the dropdown menu
 4. Click "Connect" to establish communication with the drive

@@ -24,7 +24,7 @@ from lang.translations import TRANSLATIONS, t
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Nidec Commander Control")
+        self.setWindowTitle("Nidec Commander CDE")
         self.setGeometry(100, 100, 1000, 750)
         
         # Initialize settings
@@ -48,6 +48,27 @@ class MainWindow(QMainWindow):
         
         # File menu
         file_menu = menubar.addMenu(t('file_menu', self.current_language))
+        
+        # Save Configuration
+        save_config_action = QAction(t('save_config', self.current_language), self)
+        save_config_action.setShortcut(QKeySequence.Save)
+        save_config_action.triggered.connect(self.save_configuration)
+        file_menu.addAction(save_config_action)
+        
+        # Load Configuration
+        load_config_action = QAction(t('load_config', self.current_language), self)
+        load_config_action.setShortcut(QKeySequence.Open)
+        load_config_action.triggered.connect(self.load_configuration)
+        file_menu.addAction(load_config_action)
+        
+        file_menu.addSeparator()
+        
+        # Export Data
+        export_data_action = QAction(t('export_data', self.current_language), self)
+        export_data_action.triggered.connect(self.export_data)
+        file_menu.addAction(export_data_action)
+        
+        file_menu.addSeparator()
         
         # Add Check for Updates to File menu
         update_action = QAction(t('check_for_updates', self.current_language), self)
@@ -104,6 +125,8 @@ class MainWindow(QMainWindow):
         help_action.triggered.connect(lambda: self.show_help())
         help_menu.addAction(help_action)
         
+        help_menu.addSeparator()
+        
         # Help -> About
         about_action = QAction(t('about', self.current_language), self)
         about_action.triggered.connect(lambda: self.show_about())
@@ -127,21 +150,54 @@ class MainWindow(QMainWindow):
         from script.sponsor import Sponsor
         Sponsor.show_sponsor(self, self.current_language)
     
-    def change_language(self):
-        """Change the application language."""
-        action = self.sender()
-        if action and action.isChecked():
-            new_lang = action.data()
-            if new_lang != self.current_language:
-                self.current_language = new_lang
-                self.settings.setValue("language", new_lang)
-                # Restart the application to apply language changes
-                QMessageBox.information(
-                    self,
-                    t('restart_required', self.current_language),
-                    t('restart_message', self.current_language)
-                )
-                # Note: The actual language change will take effect after restart
+    def change_language(self, lang_code=None):
+        """Change the application language and update the UI immediately."""
+        if lang_code is None:
+            action = self.sender()
+            if not action or not action.isChecked():
+                return
+            lang_code = action.data()
+            
+        if lang_code != self.current_language:
+            self.current_language = lang_code
+            self.settings.setValue("language", lang_code)
+            
+            # Update all UI elements with the new language
+            self.retranslate_ui()
+            
+            # Update the language menu check state
+            if hasattr(self, 'language_group'):
+                for action in self.language_group.actions():
+                    action.setChecked(action.data() == lang_code)
+    
+    def retranslate_ui(self):
+        """Retranslate all UI elements with the current language."""
+        # Update window title
+        self.setWindowTitle(t('app_title', self.current_language))
+        
+        # Update menu bar
+        if hasattr(self, 'menuBar'):
+            for menu in self.menuBar().findChildren(QMenu):
+                if menu.title() in [t('file_menu', 'en'), t('tools_menu', 'en'), 
+                                 t('language_menu', 'en'), t('help_menu', 'en')]:
+                    # This is one of our main menus
+                    if menu.title() == t('file_menu', 'en'):
+                        menu.setTitle(t('file_menu', self.current_language))
+                    elif menu.title() == t('tools_menu', 'en'):
+                        menu.setTitle(t('tools_menu', self.current_language))
+                    elif menu.title() == t('language_menu', 'en'):
+                        menu.setTitle(t('language_menu', self.current_language))
+                    elif menu.title() == t('help_menu', 'en'):
+                        menu.setTitle(t('help_menu', self.current_language))
+                else:
+                    # This is a submenu or action
+                    for action in menu.actions():
+                        if not action.isSeparator() and action.text():
+                            # Find the translation key for this action's text
+                            for key, value in TRANSLATIONS['en'].items():
+                                if value == action.text() and key in TRANSLATIONS.get(self.current_language, {}):
+                                    action.setText(TRANSLATIONS[self.current_language][key])
+                                    break
     
     def check_for_updates(self):
         """Check for application updates."""

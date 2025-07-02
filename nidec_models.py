@@ -2,6 +2,8 @@
 Nidec Commander CDE Series Models Configuration
 """
 
+from lang.translations import t
+
 # Model specifications and register mappings
 MODEL_CONFIG = {
     "CDE400": {
@@ -92,27 +94,83 @@ MODEL_CONFIG = {
 
 # Fault code descriptions
 FAULT_CODES = {
-    0x0000: "No Fault",
-    0x0001: "Overcurrent",
-    0x0002: "Overvoltage",
-    0x0003: "Undervoltage",
-    0x0004: "Inverter Overheat",
-    0x0005: "Motor Overload",
-    0x0006: "Input Phase Loss",
-    0x0007: "Output Phase Loss",
-    0x0008: "External Fault",
-    0x0009: "EEPROM Error",
-    0x000A: "CPU Error",
-    0x000B: "Overload",
-    0x000C: "Braking Resistor Overload",
-    0x000D: "Motor Stall Prevention",
-    0x000E: "Communication Error"
+    0x0000: 'no_fault',
+    0x0001: 'overcurrent',
+    0x0002: 'overvoltage',
+    0x0003: 'undervoltage',
+    0x0004: 'inverter_overheat',
+    0x0005: 'motor_overload',
+    0x0006: 'input_phase_loss',
+    0x0007: 'output_phase_loss',
+    0x0008: 'external_fault',
+    0x0009: 'eeprom_error',
+    0x000A: 'cpu_error',
+    0x000B: 'overload',
+    0x000C: 'braking_resistor_overload',
+    0x000D: 'motor_stall_prevention',
+    0x000E: 'communication_error'
 }
 
-def get_model_list():
-    """Return list of available drive models"""
-    return list(MODEL_CONFIG.keys())
+def get_fault_description(fault_code, language='en'):
+    """Get the translated description for a fault code.
+    
+    Args:
+        fault_code: The fault code value
+        language: Language code (default: 'en')
+        
+    Returns:
+        str: The translated fault description
+    """
+    if fault_code in FAULT_CODES:
+        return t(FAULT_CODES[fault_code], language)
+    return t('unknown_fault', language, default='Unknown Fault')
 
-def get_model_config(model):
-    """Get configuration for a specific model"""
-    return MODEL_CONFIG.get(model, MODEL_CONFIG["CDE400"])
+def get_model_list(language='en'):
+    """Return list of available drive models with translated names
+    
+    Args:
+        language: Language code (default: 'en')
+        
+    Returns:
+        list: List of model names
+    """
+    return [
+        'CDE400', 'CDE550', 'CDE750', 'CDE1100S'
+    ]
+    
+def get_model_display_name(model, language='en'):
+    """Get the display name for a model
+    
+    Args:
+        model: Model identifier (e.g., 'CDE400')
+        language: Language code (default: 'en')
+        
+    Returns:
+        str: Translated model name
+    """
+    return model  # Models don't need translation as they are product codes
+
+def get_model_config(model, language='en'):
+    """Get configuration for a specific model
+    
+    Args:
+        model: Model identifier (e.g., 'CDE400')
+        language: Language code (default: 'en')
+        
+    Returns:
+        dict: Model configuration with translated strings
+    """
+    config = MODEL_CONFIG.get(model, MODEL_CONFIG["CDE400"]).copy()
+    
+    # Translate register names in the config
+    if 'registers' in config:
+        translated_registers = {}
+        for reg_name, reg_addr in config['registers'].items():
+            # Convert register name to translation key (snake_case)
+            trans_key = reg_name.lower().replace(' ', '_')
+            # Get translation or fall back to original name
+            translated_name = t(trans_key, language, default=reg_name)
+            translated_registers[translated_name] = reg_addr
+        config['registers'] = translated_registers
+    
+    return config

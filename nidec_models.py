@@ -29,7 +29,7 @@ MODEL_CONFIG: Dict[str, Dict[str, Any]] = {
         "max_frequency": 400.0,  # Hz
         "max_current": 8.0,      # A
         "power_rating": 0.4,     # kW
-        "voltage_rating": 230.0, # V
+        "voltage_rating": 400.0, # V
         "registers": {
             "frequency_reference": 0x1000,
             "run_command": 0x2000,
@@ -47,10 +47,10 @@ MODEL_CONFIG: Dict[str, Dict[str, Any]] = {
         }
     },
     "CDE550": {
-        "max_frequency": 550.0,
-        "max_current": 10.0,
-        "power_rating": 0.55,
-        "voltage_rating": 230.0,
+        "max_frequency": 50.0, #Hz
+        "max_current": 10, #A
+        "power_rating": 5.5, #KW
+        "voltage_rating": 400.0, #V
         "registers": {
             "frequency_reference": 0x1000,
             "run_command": 0x2000,
@@ -68,10 +68,10 @@ MODEL_CONFIG: Dict[str, Dict[str, Any]] = {
         }
     },
     "CDE750": {
-        "max_frequency": 750.0,
-        "max_current": 15.0,
-        "power_rating": 0.75,
-        "voltage_rating": 400.0,
+        "max_frequency": 750.0, #Hz
+        "max_current": 15.0, #A
+        "power_rating": 0.75, #Kw
+        "voltage_rating": 400.0, #V
         "registers": {
             "frequency_reference": 0x1000,
             "run_command": 0x2000,
@@ -89,10 +89,10 @@ MODEL_CONFIG: Dict[str, Dict[str, Any]] = {
         }
     },
     "CDE1100S": {
-        "max_frequency": 1100.0,
-        "max_current": 22.0,
-        "power_rating": 1.1,
-        "voltage_rating": 400.0,
+        "max_frequency": 1100.0, #Hz
+        "max_current": 22.0, #A
+        "power_rating": 1.1, #Kw
+        "voltage_rating": 400.0, #V
         "registers": {
             "frequency_reference": 0x1000,
             "run_command": 0x2000,

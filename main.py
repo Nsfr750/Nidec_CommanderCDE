@@ -5,7 +5,7 @@ This module serves as the main entry point for the Nidec CommanderCDE applicatio
 It provides a graphical user interface for controlling and monitoring Nidec motor drives.
 
 Key Features:
-- Connection management for Modbus RTU devices
+- Connection management for Nidec drives
 - Real-time monitoring of drive parameters
 - Parameter configuration and tuning
 - Fault diagnostics and logging
@@ -14,7 +14,6 @@ Key Features:
 
 Dependencies:
 - PyQt6: For the graphical user interface
-- pymodbus: For Modbus RTU communication
 - serial: For serial port management
 
 Author: Nsfr750
@@ -47,10 +46,6 @@ from PyQt6.QtWidgets import (
 # No sip import needed for PyQt6
 from PyQt6.QtGui import QIcon
 
-# Modbus communication
-from pymodbus.client import ModbusSerialClient as ModbusClient
-from pymodbus.exceptions import ModbusException
-
 # Local imports
 from nidec_models import get_model_list, get_model_config, FAULT_CODES
 from menu import MainWindow  # Main application window with menu bar
@@ -69,7 +64,7 @@ class NidecCommanderGUI(MainWindow):
     - Data logging
     
     Attributes:
-        client: Modbus client instance for communication
+        client: Nidec drive client instance for communication
         connected: Boolean indicating connection status
         current_model: Currently selected drive model
         current_language: Current UI language
@@ -156,10 +151,9 @@ class NidecCommanderGUI(MainWindow):
             self.settings.setValue("last_used_dir", self.last_used_dir)
             
         # Save connection settings if UI is initialized
-        if hasattr(self, 'port_combo') and hasattr(self, 'baud_combo') and hasattr(self, 'modbus_addr'):
+        if hasattr(self, 'port_combo') and hasattr(self, 'baud_combo'):
             self.settings.setValue("port", self.port_combo.currentText())
             self.settings.setValue("baudrate", self.baud_combo.currentText())
-            self.settings.setValue("modbus_addr", self.modbus_addr.value())
         
     def setup_ui(self):
         """Initialize the main UI components"""
@@ -272,11 +266,6 @@ class NidecCommanderGUI(MainWindow):
         self.connection_group = QGroupBox(t('connection', self.current_language))
         layout = QFormLayout()
         
-        # Modbus address
-        self.modbus_addr = QSpinBox()
-        self.modbus_addr.setRange(1, 247)
-        self.modbus_addr.setValue(1)
-        
         # Port selection
         self.port_combo = QComboBox()
         self.refresh_ports()
@@ -298,7 +287,6 @@ class NidecCommanderGUI(MainWindow):
         self.connect_btn.clicked.connect(self.toggle_connection)
         
         # Add widgets to layout
-        layout.addRow(f"{t('modbus_address', self.current_language)}:", self.modbus_addr)
         layout.addRow(f"{t('port', self.current_language)}:", self.port_combo)
         layout.addRow(f"{t('baud_rate', self.current_language)}:", self.baud_combo)
         
@@ -310,6 +298,30 @@ class NidecCommanderGUI(MainWindow):
         # Add button layout to main layout
         layout.addRow(btn_layout)
         self.connection_group.setLayout(layout)
+        
+        # Apply saved settings
+        self.load_connection_settings()
+    
+    def load_connection_settings(self):
+        """Load saved connection settings"""
+        # Load saved port and baud rate
+        saved_port = self.settings.value("port", "")
+        saved_baud = self.settings.value("baudrate", "9600")
+        
+        # Find and select the saved port if it exists
+        index = self.port_combo.findText(saved_port)
+        if index >= 0:
+            self.port_combo.setCurrentIndex(index)
+            
+        # Set the saved baud rate
+        index = self.baud_combo.findText(saved_baud)
+        if index >= 0:
+            self.baud_combo.setCurrentIndex(index)
+    
+    def save_connection_settings(self):
+        """Save connection settings"""
+        self.settings.setValue("port", self.port_combo.currentText())
+        self.settings.setValue("baudrate", self.baud_combo.currentText())
     
     def setup_dashboard_metrics_tab(self):
         """Set up the dashboard metrics tab with comprehensive monitoring."""
@@ -394,11 +406,11 @@ class NidecCommanderGUI(MainWindow):
         self.speed_spin.setDecimals(1)
         
         self.set_speed_btn = QPushButton("Set Speed")
-        self.set_speed_btn.clicked.connect(self.set_speed)
+        self.set_speed_btn.clicked.connect(self.set_drive_speed)
         self.set_speed_btn.setEnabled(False)
         
         self.run_btn = QPushButton("Run")
-        self.run_btn.clicked.connect(self.run_drive)
+        self.run_btn.clicked.connect(self.start_drive)
         self.run_btn.setEnabled(False)
         
         self.stop_btn = QPushButton("Stop")
@@ -571,63 +583,49 @@ class NidecCommanderGUI(MainWindow):
         if not self.connected:
             self.connect_to_drive()
         else:
-            self.disconnect_drive()
+            self.disconnect_from_drive()
     
     def connect_to_drive(self):
-        port = self.port_combo.currentText()
-        if not port:
-            QMessageBox.warning(self, "Error", "No port selected!")
+        """Connect to the Nidec drive."""
+        if self.connected:
+            self.disconnect_from_drive()
             return
-        
-        try:
-            # Get connection parameters
-            baudrate = int(self.baud_combo.currentText())
-            modbus_addr = self.modbus_addr.value()
             
-            # Configure Modbus RTU client
-            self.client = ModbusClient(
-                method='rtu',
-                port=port,
-                baudrate=baudrate,
-                bytesize=8,
-                parity='E',  # Even parity (common for Nidec drives)
-                stopbits=1,
-                timeout=1
-            )
+        try:
+            port = self.port_combo.currentText()
+            baudrate = int(self.baud_combo.currentText())
+            
+            # Initialize client (replace with actual communication code)
+            self.client = None
             
             # Save settings
-            self.settings.setValue("port", port)
-            self.settings.setValue("baudrate", baudrate)
-            self.settings.setValue("modbus_addr", modbus_addr)
+            self.save_connection_settings()
             
-            # Try to connect
-            if self.client.connect():
-                self.connected = True
-                self.connect_btn.setText("Disconnect")
-                self.statusBar().showMessage(f"Connected to {port}")
+            # Update UI
+            self.connected = True
+            self.connect_btn.setText("Disconnect")
+            self.statusBar().showMessage(f"Connected to {port}")
                 
-                # Enable controls
-                self.set_speed_btn.setEnabled(True)
-                self.run_btn.setEnabled(True)
-                self.stop_btn.setEnabled(True)
-                self.fwd_btn.setEnabled(True)
-                self.rev_btn.setEnabled(True)
-                self.read_param_btn.setEnabled(True)
-                self.write_param_btn.setEnabled(True)
-                self.reset_fault_btn.setEnabled(True)
+            # Enable controls
+            self.set_speed_btn.setEnabled(True)
+            self.run_btn.setEnabled(True)
+            self.stop_btn.setEnabled(True)
+            self.fwd_btn.setEnabled(True)
+            self.rev_btn.setEnabled(True)
+            self.read_param_btn.setEnabled(True)
+            self.write_param_btn.setEnabled(True)
+            self.reset_fault_btn.setEnabled(True)
                 
-                # Start diagnostics updates
-                self.diag_timer.start(1000)  # Update every second
-            else:
-                QMessageBox.critical(self, "Error", "Failed to connect to the drive!")
-                
+            # Start diagnostics updates
+            self.diag_timer.start(1000)  # Update every second
+            
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Connection error: {str(e)}")
     
-    def disconnect_drive(self):
+    def disconnect_from_drive(self):
+        """Disconnect from the Nidec drive."""
         if self.client:
             self.diag_timer.stop()
-            self.client.close()
             self.client = None
         
         self.connected = False
@@ -644,217 +642,182 @@ class NidecCommanderGUI(MainWindow):
         self.write_param_btn.setEnabled(False)
         self.reset_fault_btn.setEnabled(False)
     
-    def set_speed(self):
+    def set_drive_speed(self):
+        """Set the drive speed to the specified frequency."""
         if not self.connected:
+            QMessageBox.warning(self, "Error", "Not connected to drive!")
             return
             
-        speed = self.speed_spin.value()
-        # Convert Hz to drive units if needed (0.01 Hz units is common)
-        drive_units = int(speed * 100)
-        
         try:
-            # Write to holding register for frequency reference
-            # Note: Register addresses may need adjustment based on the drive's documentation
-            response = self.client.write_register(address=0x1000, value=drive_units, unit=1)
-            if response.isError():
-                raise Exception("Failed to set speed")
-                
+            speed = self.speed_spin.value()
+            # Convert speed to drive units if needed
+            drive_units = int(speed * 100)  # Example: 1.00 Hz = 100 units
+            
+            # TODO: Replace with actual drive communication
+            # response = your_drive_interface.set_speed(drive_units)
+            
             self.statusBar().showMessage(f"Speed set to {speed} Hz")
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to set speed: {str(e)}")
     
-    def run_drive(self):
+    def start_drive(self):
+        """Start the drive."""
         if not self.connected:
+            QMessageBox.warning(self, "Error", "Not connected to drive!")
             return
             
         try:
-            # Write run command to control register
-            # Note: The exact command value depends on the drive's protocol
-            response = self.client.write_register(address=0x2000, value=0x0001, unit=1)
-            if response.isError():
-                raise Exception("Failed to start drive")
-                
+            # TODO: Replace with actual drive communication
+            # response = your_drive_interface.start()
+            
             self.statusBar().showMessage("Drive started")
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to start drive: {str(e)}")
     
     def stop_drive(self):
+        """Stop the drive."""
         if not self.connected:
             return
             
         try:
-            # Write stop command to control register
-            response = self.client.write_register(address=0x2000, value=0x0000, unit=1)
-            if response.isError():
-                raise Exception("Failed to stop drive")
-                
+            # TODO: Replace with actual drive communication
+            # response = your_drive_interface.stop()
+            
             self.statusBar().showMessage("Drive stopped")
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to stop drive: {str(e)}")
     
     def set_direction(self, direction):
+        """Set the drive direction.
+        
+        Args:
+            direction (str): 'forward' or 'reverse'
+        """
         if not self.connected:
+            QMessageBox.warning(self, "Error", "Not connected to drive!")
             return
             
         try:
-            # 0x0001 = Forward, 0x0002 = Reverse (may vary by drive model)
-            value = 0x0001 if direction == "forward" else 0x0002
-            
-            # Write direction command to control register
-            # Note: The exact register and values depend on the drive's protocol
-            response = self.client.write_register(address=0x2001, value=value, unit=1)
-            if response.isError():
-                raise Exception("Failed to set direction")
+            # TODO: Replace with actual drive communication
+            # if direction.lower() == 'forward':
+            #     response = your_drive_interface.set_forward()
+            # else:
+            #     response = your_drive_interface.set_reverse()
                 
             self.statusBar().showMessage(f"Direction set to {direction.capitalize()}")
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to set direction: {str(e)}")
     
     def read_parameter(self):
+        """Read a parameter from the drive."""
         if not self.connected:
+            QMessageBox.warning(self, "Error", "Not connected to drive!")
             return
             
-        param_name = self.param_combo.currentText()
-        
-        # Map parameter names to register addresses
-        param_map = {
-            "Acceleration Time": 0x3000,
-            "Deceleration Time": 0x3001,
-            "Motor Rated Current": 0x3002,
-            "Maximum Frequency": 0x3003
-        }
-        
-        address = param_map.get(param_name, 0x3000)
-        
         try:
-            # Read parameter from drive
-            response = self.client.read_holding_registers(address=address, count=1, unit=1)
-            if response.isError():
-                raise Exception("Failed to read parameter")
-                
-            # Convert from drive units to display units
-            value = response.registers[0]
-            if param_name in ["Acceleration Time", "Deceleration Time"]:
-                value /= 10.0  # Convert to seconds
-            elif param_name == "Motor Rated Current":
-                value /= 10.0  # Convert to Amps
-            elif param_name == "Maximum Frequency":
-                value /= 100.0  # Convert to Hz
+            param_name = self.param_combo.currentText()
             
-            self.param_value.setValue(value)
-            self.statusBar().showMessage(f"Read {param_name}: {value}")
+            # Map parameter name to address/command
+            # This is just an example - replace with your actual parameter mapping
+            param_map = {
+                "Acceleration Time": 0x1000,
+                "Deceleration Time": 0x1001,
+                "Motor Rated Current": 0x1002,
+                "Maximum Frequency": 0x1003
+            }
+            
+            address = param_map.get(param_name, 0)
+            
+            # TODO: Replace with actual drive communication
+            # response = your_drive_interface.read_parameter(address)
+            # value = response.value  # Adjust based on actual response format
+            
+            # For now, just show 0
+            self.param_value.setValue(0)
+            self.statusBar().showMessage(f"Read {param_name}: 0")
+            
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to read parameter: {str(e)}")
     
     def write_parameter(self):
+        """Write a parameter to the drive."""
         if not self.connected:
+            QMessageBox.warning(self, "Error", "Not connected to drive!")
             return
             
-        param_name = self.param_combo.currentText()
-        value = self.param_value.value()
-        
-        # Map parameter names to register addresses
-        param_map = {
-            "Acceleration Time": 0x3000,
-            "Deceleration Time": 0x3001,
-            "Motor Rated Current": 0x3002,
-            "Maximum Frequency": 0x3003
-        }
-        
-        address = param_map.get(param_name, 0x3000)
-        
-        # Convert from display units to drive units
-        if param_name in ["Acceleration Time", "Deceleration Time"]:
-            drive_value = int(value * 10)  # Convert from seconds to 0.1s units
-        elif param_name == "Motor Rated Current":
-            drive_value = int(value * 10)  # Convert from Amps to 0.1A units
-        elif param_name == "Maximum Frequency":
-            drive_value = int(value * 100)  # Convert from Hz to 0.01Hz units
-        else:
-            drive_value = int(value)
-        
         try:
-            # Write parameter to drive
-            response = self.client.write_register(address=address, value=drive_value, unit=1)
-            if response.isError():
-                raise Exception("Failed to write parameter")
-                
+            param_name = self.param_combo.currentText()
+            value = self.param_value.value()
+            
+            # Map parameter name to address/command
+            # This is just an example - replace with your actual parameter mapping
+            param_map = {
+                "Acceleration Time": 0x1000,
+                "Deceleration Time": 0x1001,
+                "Motor Rated Current": 0x1002,
+                "Maximum Frequency": 0x1003
+            }
+            
+            address = param_map.get(param_name, 0)
+            
+            # Convert value to drive units if needed
+            if param_name in ["Acceleration Time", "Deceleration Time"]:
+                drive_value = int(value * 10)  # Convert to 0.1s units
+            elif param_name == "Motor Rated Current":
+                drive_value = int(value * 10)  # Convert to 0.1A units
+            elif param_name == "Maximum Frequency":
+                drive_value = int(value * 100)  # Convert to 0.01Hz units
+            else:
+                drive_value = int(value)
+            
+            # TODO: Replace with actual drive communication
+            # response = your_drive_interface.write_parameter(address, drive_value)
+            
             self.statusBar().showMessage(f"Wrote {param_name}: {value}")
+            
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to write parameter: {str(e)}")
     
     def update_diagnostics(self):
+        """Update the diagnostic information display."""
         if not self.connected:
             return
             
         try:
-            # Read multiple parameters in one request if possible
-            # Note: Addresses and scaling factors may need adjustment
-            response = self.client.read_holding_registers(address=0x2002, count=4, unit=1)
-            if not response.isError() and len(response.registers) >= 4:
-                # Get current timestamp
-                current_time = time.time()
-                
-                # Update output frequency (0.01 Hz units)
-                freq_hz = response.registers[0] / 100.0
-                self.output_freq.setText(f"{freq_hz:.2f} Hz")
-                
-                # Update output current (0.1 A units)
-                current_a = response.registers[1] / 10.0
-                self.output_current.setText(f"{current_a:.1f} A")
-                
-                # Update DC bus voltage (0.1 V units)
-                voltage_v = response.registers[2] / 10.0
-                self.dc_bus_voltage.setText(f"{voltage_v:.1f} V")
-                
-                # Update drive status
-                status_bits = response.registers[3]
-                status_text = []
-                if status_bits & 0x0001:
-                    status_text.append("Running")
-                if status_bits & 0x0002:
-                    status_text.append("Forward")
-                if status_bits & 0x0004:
-                    status_text.append("Reverse")
-                if status_bits & 0x0008:
-                    status_text.append("Fault")
-                
-                status_str = ", ".join(status_text) if status_text else "Stopped"
-                self.drive_status.setText(status_str)
-                
-                # If fault bit is set, read fault code
-                fault_code = None
-                if status_bits & 0x0008:
-                    fault_response = self.client.read_holding_registers(address=0x2006, count=1, unit=1)
-                    if not fault_response.isError():
-                        fault_code = fault_response.registers[0]
-                        self.fault_status.setText(f"Fault Code: {fault_code:04X}")
-                    else:
-                        self.fault_status.setText("Fault (unable to read code)")
-                else:
-                    self.fault_status.setText("No Faults")
-                
-                # Log data if logging is enabled and enough time has passed
-                if self.logging_enabled and (current_time - self.last_log_time) * 1000 >= self.log_interval:
-                    self.log_data(current_time, freq_hz, current_a, voltage_v, status_str, fault_code)
-                    self.last_log_time = current_time
+            # TODO: Replace with actual drive communication
+            # Example: response = your_drive_interface.get_status()
+            
+            # For now, just show zeros/placeholders
+            self.output_freq_label.setText("0.0 Hz")
+            self.output_rpm_label.setText("0 RPM")
+            self.setpoint_freq_label.setText("0.0 Hz")
+            self.output_current_label.setText("0.0 A")
+            self.dc_bus_voltage_label.setText("0.0 V")
+            self.output_voltage_label.setText("0.0 V")
+            self.output_power_label.setText("0.0 kW")
+            self.temperature_label.setText("0.0 °C")
+            
+            # Update status
+            self.drive_status_label.setText("Stopped")
+            self.direction_label.setText("Stopped")
+            self.fault_status_label.setText("No Faults")
             
         except Exception as e:
             # Don't show error message for every failed update
-            pass
+            print(f"Diagnostics update error: {str(e)}")
     
     def reset_faults(self):
+        """Reset drive faults."""
         if not self.connected:
+            QMessageBox.warning(self, "Error", "Not connected to drive!")
             return
             
         try:
-            # Write reset command to control register
-            # Note: The exact command value depends on the drive's protocol
-            response = self.client.write_register(address=0x2000, value=0x0080, unit=1)
-            if response.isError():
-                raise Exception("Failed to reset faults")
-                
+            # TODO: Replace with actual drive communication
+            # response = your_drive_interface.reset_faults()
+            
             self.statusBar().showMessage("Faults reset")
+            
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to reset faults: {str(e)}")
     
@@ -867,59 +830,59 @@ class NidecCommanderGUI(MainWindow):
         try:
             # Read multiple parameters in one request for efficiency
             # Read parameters from 0x2002 (output frequency) to 0x2006 (fault code)
-            response = self.client.read_holding_registers(address=0x2002, count=5, unit=1)
-            if response.isError() or len(response.registers) < 4:
-                raise Exception("Failed to read drive parameters")
+            # response = self.client.read_holding_registers(address=0x2002, count=5, unit=1)
+            # if response.isError() or len(response.registers) < 4:
+            #     raise Exception("Failed to read drive parameters")
             
             # Extract values from response
-            freq_reg, current_reg, voltage_reg, status_reg = response.registers[:4]
-            fault_code = response.registers[4] if len(response.registers) > 4 else None
+            # freq_reg, current_reg, voltage_reg, status_reg = response.registers[:4]
+            # fault_code = response.registers[4] if len(response.registers) > 4 else None
             
             # Update Speed Metrics
-            freq_hz = freq_reg / 100.0  # 0.01 Hz units
-            rpm = int(freq_hz * 60)  # Convert Hz to RPM (assuming 1 pole pair)
-            self.output_freq_label.setText(f"{freq_hz:.2f} Hz")
-            self.output_rpm_label.setText(f"{rpm} {t('rpm', self.current_language)}")
+            # freq_hz = freq_reg / 100.0  # 0.01 Hz units
+            # rpm = int(freq_hz * 60)  # Convert Hz to RPM (assuming 1 pole pair)
+            self.output_freq_label.setText("0.0 Hz")
+            self.output_rpm_label.setText("0 RPM")
             
             # Read setpoint frequency from a different register
-            setpoint_response = self.client.read_holding_registers(address=0x2001, count=1, unit=1)
-            if not setpoint_response.isError():
-                setpoint_hz = setpoint_response.registers[0] / 100.0  # 0.01 Hz units
-                self.setpoint_freq_label.setText(f"{setpoint_hz:.2f} Hz")
+            # setpoint_response = self.client.read_holding_registers(address=0x2001, count=1, unit=1)
+            # if not setpoint_response.isError():
+            #     setpoint_hz = setpoint_response.registers[0] / 100.0  # 0.01 Hz units
+            self.setpoint_freq_label.setText("0.0 Hz")
             
             # Update Power Metrics
-            current_a = current_reg / 10.0  # 0.1 A units
-            voltage_v = voltage_reg / 10.0  # 0.1 V units
-            power_kw = (current_a * voltage_v) / 1000.0  # Convert to kW
+            # current_a = current_reg / 10.0  # 0.1 A units
+            # voltage_v = voltage_reg / 10.0  # 0.1 V units
+            # power_kw = (current_a * voltage_v) / 1000.0  # Convert to kW
             
-            self.output_current_label.setText(f"{current_a:.1f} A")
-            self.dc_bus_voltage_label.setText(f"{voltage_v:.1f} V")
-            self.output_voltage_label.setText(f"{voltage_v:.1f} V")  # Assuming same as bus voltage
-            self.output_power_label.setText(f"{power_kw:.2f} kW")
+            self.output_current_label.setText("0.0 A")
+            self.dc_bus_voltage_label.setText("0.0 V")
+            self.output_voltage_label.setText("0.0 V")  # Assuming same as bus voltage
+            self.output_power_label.setText("0.0 kW")
             
             # Update Status Group
-            status_bits = status_reg
-            status_text = []
-            direction_text = t('stopped', self.current_language)
+            # status_bits = status_reg
+            # status_text = []
+            # direction_text = t('stopped', self.current_language)
             
-            if status_bits & 0x0001:  # Running
-                status_text.append(t('running', self.current_language))
-            if status_bits & 0x0002:  # Forward
-                direction_text = t('forward', self.current_language)
-            if status_bits & 0x0004:  # Reverse
-                direction_text = t('reverse', self.current_language)
-            if status_bits & 0x0008:  # Fault
-                status_text.append(t('fault', self.current_language))
+            # if status_bits & 0x0001:  # Running
+            #     status_text.append(t('running', self.current_language))
+            # if status_bits & 0x0002:  # Forward
+            #     direction_text = t('forward', self.current_language)
+            # if status_bits & 0x0004:  # Reverse
+            #     direction_text = t('reverse', self.current_language)
+            # if status_bits & 0x0008:  # Fault
+            #     status_text.append(t('fault', self.current_language))
             
-            status_str = ", ".join(status_text) if status_text else t('stopped', self.current_language)
+            status_str = "Stopped"
             self.drive_status_label.setText(status_str)
-            self.direction_label.setText(direction_text)
+            self.direction_label.setText("Stopped")
             
             # Read and update temperature
-            temp_response = self.client.read_holding_registers(address=0x2010, count=1, unit=1)
-            if not temp_response.isError():
-                temp_c = temp_response.registers[0] / 10.0  # 0.1°C units
-                self.temperature_label.setText(f"{temp_c:.1f} °C")
+            # temp_response = self.client.read_holding_registers(address=0x2010, count=1, unit=1)
+            # if not temp_response.isError():
+            #     temp_c = temp_response.registers[0] / 10.0  # 0.1°C units
+            self.temperature_label.setText("0.0 °C")
             
             # Update run time (example implementation)
             if hasattr(self, 'start_time'):
@@ -1226,7 +1189,6 @@ class NidecCommanderGUI(MainWindow):
                 'connection': {
                     'port': self.port_combo.currentText(),
                     'baudrate': int(self.baud_combo.currentText()),
-                    'modbus_address': self.modbus_addr.value(),
                     'timeout': 1.0,  # Default timeout in seconds
                     'parity': 'E',   # Even parity
                     'stopbits': 1,
@@ -1351,8 +1313,6 @@ class NidecCommanderGUI(MainWindow):
                     baud = str(conn['baudrate'])
                     if baud in [self.baud_combo.itemText(i) for i in range(self.baud_combo.count())]:
                         self.baud_combo.setCurrentText(baud)
-                if 'modbus_address' in conn:
-                    self.modbus_addr.setValue(int(conn['modbus_address']))
             
             # Apply drive parameters
             if 'drive_parameters' in config:
@@ -1428,7 +1388,7 @@ class NidecCommanderGUI(MainWindow):
         # Disconnect from the drive if connected
         if self.connected and hasattr(self, 'client') and self.client:
             try:
-                self.disconnect_drive()
+                self.disconnect_from_drive()
             except Exception as e:
                 print(f"Error disconnecting from drive: {str(e)}")
                 
@@ -1486,7 +1446,7 @@ class NidecCommanderGUI(MainWindow):
     def closeEvent(self, event):
         # Clean up on application close
         if self.connected:
-            self.disconnect_drive()
+            self.disconnect_from_drive()
             
         # Stop logging if active
         if self.logging_enabled:

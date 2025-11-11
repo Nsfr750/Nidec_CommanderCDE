@@ -184,3 +184,5 @@ CommanderCDE.exe
 /main.dist
 images/cde.jpg
 TXT
+clear_cache.py
+clean_pycache.py

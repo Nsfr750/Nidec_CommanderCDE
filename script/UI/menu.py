@@ -42,7 +42,7 @@ from PyQt6.QtWidgets import (
     QMessageBox, QWidget, QVBoxLayout
 )
 from PyQt6.QtGui import QCloseEvent, QColor, QPalette, QAction, QKeySequence, QActionGroup
-from PyQt6.QtCore import Qt, QSettings, QObject, pyqtSignal
+from PyQt6.QtCore import Qt, QSettings, QObject, pyqtSignal, QProcess, QProcessEnvironment
 
 # Local application imports
 from script.UI.help import HelpWindow
@@ -165,9 +165,10 @@ class MainWindow(QMainWindow):
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
         
-        # Tools menu (for cur/copy/paste)
+        # Tools menu
         tools_menu = menubar.addMenu(t('tools_menu', self.current_language))
         
+        # Cut/Copy/Paste actions
         cut_action = QAction(t('cut', self.current_language), self)
         cut_action.setShortcut(QKeySequence.StandardKey.Cut)
         tools_menu.addAction(cut_action)
@@ -179,6 +180,13 @@ class MainWindow(QMainWindow):
         paste_action = QAction(t('paste', self.current_language), self)
         paste_action.setShortcut(QKeySequence.StandardKey.Paste)
         tools_menu.addAction(paste_action)
+        
+        tools_menu.addSeparator()
+        
+        # Simulator action
+        simulator_action = QAction(t('open_simulator', self.current_language, 'Open Simulator'), self)
+        simulator_action.triggered.connect(self.open_simulator)
+        tools_menu.addAction(simulator_action)
                 
         # Language menu
         language_menu = menubar.addMenu(t('language_menu', self.current_language))
@@ -256,16 +264,116 @@ class MainWindow(QMainWindow):
         self.help_window.show()
     
     def show_about(self):
-        from script.UI.about import AboutDialog
-        about_dialog = AboutDialog(self, self.language_manager)
-        about_dialog.exec()
-    
+        """Show the about dialog."""
+        if not hasattr(self, 'about_dialog') or not self.about_dialog:
+            self.about_dialog = AboutDialog(self)
+        self.about_dialog.exec()
+        
     def show_sponsor(self):
         """Show the sponsor dialog."""
         from script.UI.sponsor import SponsorDialog
         sponsor_dialog = SponsorDialog(self, self.language_manager)
         sponsor_dialog.exec()
         
+    def open_simulator(self):
+        """Open the Nidec Commander Simulator in a separate process."""
+        try:
+            
+            # Check if simulator is already running
+            if hasattr(self, '_simulator_process') and self._simulator_process.state() == QProcess.ProcessState.Running:
+                QMessageBox.information(
+                    self,
+                    t('info', self.current_language, 'Information'),
+                    t('simulator_already_running', self.current_language, 'The simulator is already running')
+                )
+                return
+                
+            # Get the path to the simulator script
+            script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            simulator_path = os.path.join(script_dir, 'UI', 'simulator.py')
+            
+            # Check if the simulator file exists
+            if not os.path.exists(simulator_path):
+                QMessageBox.critical(
+                    self,
+                    t('error', self.current_language, 'Error'),
+                    t('simulator_not_found', self.current_language, 
+                      'Simulator not found at: {}').format(simulator_path)
+                )
+                return
+                
+            # Create a new process for the simulator
+            self._simulator_process = QProcess()
+            
+            # Set the working directory to the script directory
+            self._simulator_process.setWorkingDirectory(script_dir)
+            
+            # Set up the environment
+            env = QProcessEnvironment.systemEnvironment()
+            env.insert("PYTHONPATH", os.pathsep.join(sys.path))
+            self._simulator_process.setProcessEnvironment(env)
+            
+            # Connect signals
+            self._simulator_process.finished.connect(self.on_simulator_finished)
+            self._simulator_process.errorOccurred.connect(self.on_simulator_error)
+            
+            # Start the simulator with the -Xfrozen_modules=off flag
+            python_executable = sys.executable
+            if sys.platform == 'win32':
+                # On Windows, we need to use the pythonw.exe to avoid a console window
+                pythonw = os.path.join(os.path.dirname(python_executable), 'pythonw.exe')
+                if os.path.exists(pythonw):
+                    python_executable = pythonw
+            
+            # Start the process
+            self._simulator_process.start(python_executable, [simulator_path])
+            
+            # Wait for the process to start
+            if not self._simulator_process.waitForStarted(5000):  # 5 second timeout
+                error = self._simulator_process.error()
+                error_str = {
+                    QProcess.ProcessError.FailedToStart: "Failed to start",
+                    QProcess.ProcessError.Crashed: "Crashed",
+                    QProcess.ProcessError.Timedout: "Timed out",
+                    QProcess.ProcessError.WriteError: "Write error",
+                    QProcess.ProcessError.ReadError: "Read error",
+                    QProcess.ProcessError.UnknownError: "Unknown error"
+                }.get(error, f"Error code: {error}")
+                
+                raise Exception(f"Failed to start simulator process: {error_str}")
+                
+        except Exception as e:
+            error_message = str(e)
+            if hasattr(self, '_simulator_process'):
+                error_message += f"\n\nProcess error: {self._simulator_process.errorString()}"
+                error_message += f"\n\nProcess output:\n{self._simulator_process.readAllStandardError().data().decode('utf-8', 'ignore')}"
+                
+            QMessageBox.critical(
+                self,
+                t('error', self.current_language, 'Error'),
+                t('error_launching_simulator', self.current_language, 
+                  'Error launching simulator: {}').format(error_message)
+            )
+    
+    def on_simulator_finished(self, exit_code, exit_status):
+        """Handle simulator process finished event."""
+        if exit_code != 0 or exit_status != QProcess.ExitStatus.NormalExit:
+            QMessageBox.warning(
+                self,
+                t('warning', self.current_language, 'Warning'),
+                t('simulator_crashed', self.current_language, 
+                  'The simulator has crashed or was closed with an error. Exit code: {}').format(exit_code)
+            )
+    
+    def on_simulator_error(self, error):
+        """Handle simulator process error event."""
+        QMessageBox.critical(
+            self,
+            t('error', self.current_language, 'Error'),
+            t('simulator_error', self.current_language, 
+              'Simulator error: {}').format(self._simulator_process.errorString())
+        )
+    
     def change_theme(self, theme_id):
         """Change the application theme.
         

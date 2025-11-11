@@ -25,6 +25,7 @@ import os
 import json
 import logging
 from pathlib import Path
+from typing import Optional
 
 # Add the script directory to the Python path
 script_dir = Path(__file__).parent / 'script'
@@ -45,12 +46,28 @@ from PyQt6.QtCore import Qt, QSettings, QObject, pyqtSignal
 
 # Local application imports
 from script.help import HelpWindow
-from script.about import About
-from script.sponsor import Sponsor
+from script.about import AboutDialog
+from script.sponsor import SponsorDialog
 from script.updates import check_for_updates
 
-# Import translations
-from lang.translations import TRANSLATIONS, t
+# Import language manager
+from lang.lang_manager import SimpleLanguageManager
+
+# Initialize language manager
+language_manager = SimpleLanguageManager()
+
+def t(key: str, language: str = 'en', default: Optional[str] = None) -> str:
+    """Translation helper function for backward compatibility.
+    
+    Args:
+        key: Translation key
+        language: Language code (default: 'en')
+        default: Default value if key is not found
+        
+    Returns:
+        str: Translated string or default value
+    """
+    return language_manager.tr(key, default or key)
 
 # Configure logging
 logging.basicConfig(
@@ -88,6 +105,10 @@ class MainWindow(QMainWindow):
         
         # Set default language if not set
         self.current_language = self.settings.value("language", "en")
+        
+        # Initialize language manager
+        from lang.lang_manager import SimpleLanguageManager
+        self.language_manager = SimpleLanguageManager()
         
         # Set default theme if not set (system, light, or dark)
         self.current_theme = self.settings.value("theme", "system")
@@ -167,8 +188,9 @@ class MainWindow(QMainWindow):
         self.language_group.setExclusive(True)
         
         # Add available languages
-        for lang_code, lang_data in TRANSLATIONS.items():
-            lang_name = lang_data.get('language_name', lang_code.upper())
+        for lang_code in language_manager.get_available_languages():
+            # Get the language name in its own language (e.g., 'English' for 'en')
+            lang_name = language_manager.tr('language_name', lang_code=lang_code, default=lang_code.upper())
             action = QAction(lang_name, self, checkable=True)
             action.setData(lang_code)
             action.triggered.connect(self.change_language)
@@ -231,12 +253,15 @@ class MainWindow(QMainWindow):
         self.help_window.show()
     
     def show_about(self):
-        from script.about import About
-        About.show_about(self, self.current_language)
+        from script.about import AboutDialog
+        about_dialog = AboutDialog(self, self.language_manager)
+        about_dialog.exec()
     
     def show_sponsor(self):
-        from script.sponsor import Sponsor
-        Sponsor.show_sponsor(parent=self, lang=self.current_language)
+        """Show the sponsor dialog."""
+        from script.sponsor import SponsorDialog
+        sponsor_dialog = SponsorDialog(self, self.language_manager)
+        sponsor_dialog.exec()
         
     def change_theme(self, theme_id):
         """Change the application theme.
@@ -407,11 +432,10 @@ class MainWindow(QMainWindow):
                         if not hasattr(action, '_original_text'):
                             action._original_text = action.text()
                         
-                        # Find the translation key for this action's text
-                        for key, value in TRANSLATIONS['en'].items():
-                            if value == action._original_text and key in TRANSLATIONS.get(self.current_language, {}):
-                                action.setText(TRANSLATIONS[self.current_language][key])
-                                break
+                        # Get the translation for the original text in the current language
+                        # We'll use the original text as the key and fallback to the original text
+                        translated_text = language_manager.tr(action._original_text, lang_code=self.current_language, default=action._original_text)
+                        action.setText(translated_text)
     
     def check_for_updates(self):
         """Check for application updates."""

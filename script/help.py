@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Optional
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTextBrowser, 
                             QPushButton, QLabel, QApplication, QWidget, QScrollArea, QSizePolicy)
 from PyQt6.QtCore import Qt, QUrl
@@ -15,7 +16,23 @@ script_dir = os.path.join(project_root, 'script')
 if script_dir not in sys.path:
     sys.path.insert(0, script_dir)
 
-from lang.translations import TRANSLATIONS, t
+from lang.lang_manager import SimpleLanguageManager
+
+# Initialize language manager
+language_manager = SimpleLanguageManager()
+
+def t(key: str, language: str = 'en', default: Optional[str] = None) -> str:
+    """Translation helper function for backward compatibility.
+    
+    Args:
+        key: Translation key
+        language: Language code (default: 'en')
+        default: Default value if key is not found
+        
+    Returns:
+        str: Translated string or default value
+    """
+    return language_manager.tr(key, default or key)
 
 class HelpWindow(QDialog):
     @staticmethod

@@ -1,0 +1,6 @@
+py -m venv venv
+.\venv\Scripts\activate
+py -m pip install -r requirements.txt   # Install dependencies
+python.exe -m pip install --upgrade pip # Upgrade pip
+py -m pip install --upgrade pyinstaller # Upgrade pyinstaller
+#

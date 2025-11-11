@@ -1,4 +1,4 @@
-# Nidec CommanderCDE 
+# Nidec CommanderCDE
 
 [![GitHub release](https://img.shields.io/badge/release-v0.0.4-green.svg?style=for-the-badge)](https://github.com/Nsfr750/Nidec_CommanderCDE/releases/latest)
 [![Python Version](https://img.shields.io/badge/python-3.8+-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
@@ -15,26 +15,35 @@ A comprehensive Python GUI application for controlling and monitoring Nidec Comm
 ## ✨ Features
 
 - **Multi-language Support**: Complete interface in English and Italian with dynamic language switching
+
 - **Multi-Model Support**: Compatible with CDE400, CDE550, CDE750, and CDE1100S drive models
+
 - **Drive Control**:
+
   - Connect to Nidec Commander CDE drives via RS-485/Modbus RTU
   - Control motor speed and direction
   - Start/Stop the drive
   - Real-time monitoring of drive status and diagnostics
   - Fault detection and reset functionality
   - Parameter backup and restore
+
 - **User Interface**:
+
   - Modern, tabbed interface with intuitive controls
   - Comprehensive dashboard with real-time metrics
   - Status bar with connection and drive status
   - Responsive design with Dark/Light theme support
   - Customizable interface elements
+
 - **Data Management**:
+
   - Real-time monitoring and logging of drive parameters
   - Data export to CSV/Excel
   - Graph visualization for parameter trends
   - Configurable data logging intervals
+
 - **Diagnostics**:
+
   - Comprehensive parameter monitoring
   - Fault history and logging
   - System status indicators
@@ -43,12 +52,14 @@ A comprehensive Python GUI application for controlling and monitoring Nidec Comm
 ## 🆕 What's New in v0.0.4
 
 ### New Features
+
 - Added support for multiple Nidec drive models (CDE400, CDE550, CDE750, CDE1100S)
 - Complete Italian translations for all UI elements
 - Enhanced help system with detailed documentation
 - Blue theme for better readability in help sections
 
 ### Improvements
+
 - Updated UI for better user experience
 - Improved error messages and logging
 - Optimized performance for real-time monitoring

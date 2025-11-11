@@ -20,8 +20,24 @@ script_dir = Path(__file__).parent
 if str(script_dir) not in sys.path:
     sys.path.insert(0, str(script_dir))
 
-# Import translations
-from lang.translations import t
+# Import language manager
+from lang.lang_manager import SimpleLanguageManager
+
+# Initialize language manager
+language_manager = SimpleLanguageManager()
+
+def t(key: str, language: str = 'en', default: Optional[str] = None) -> str:
+    """Translation helper function for backward compatibility.
+    
+    Args:
+        key: Translation key
+        language: Language code (default: 'en')
+        default: Default value if key is not found
+        
+    Returns:
+        str: Translated string or default value
+    """
+    return language_manager.tr(key, default or key)
 
 # Configure logger
 logger = logging.getLogger(__name__)

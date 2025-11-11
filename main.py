@@ -28,6 +28,7 @@ import time
 from datetime import datetime
 import serial.tools.list_ports
 from pathlib import Path
+from typing import Optional
 
 # Add the script directory to the Python path
 script_dir = Path(__file__).parent / 'script'
@@ -49,7 +50,23 @@ from PyQt6.QtGui import QIcon
 # Local imports
 from nidec_models import get_model_list, get_model_config, FAULT_CODES
 from menu import MainWindow  # Main application window with menu bar
-from lang.translations import t  # Translation function for internationalization
+from lang.lang_manager import SimpleLanguageManager  # Language manager for internationalization
+
+# Initialize language manager
+language_manager = SimpleLanguageManager()
+
+def t(key: str, language: str = 'en', default: Optional[str] = None) -> str:
+    """Translation helper function for backward compatibility.
+    
+    Args:
+        key: Translation key
+        language: Language code (default: 'en')
+        default: Default value if key is not found
+        
+    Returns:
+        str: Translated string or default value
+    """
+    return language_manager.tr(key, default or key, lang_code=language)
 
 class NidecCommanderGUI(MainWindow):
     """

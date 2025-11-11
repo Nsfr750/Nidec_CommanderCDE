@@ -1,0 +1,36 @@
+[Version]
+FileVersion=0.0.5
+ProductVersion=0.0.5
+CompanyName=Tuxxle
+FileDescription=Control/Program Nidec Commander CDE
+InternalName=CommanderCDE
+LegalCopyright=© Copyright 2024-2025 Nsfr750 - All Rights Reserved
+OriginalFilename=CommanderCDE.exe
+ProductName=Nidec CommanderCDE
+ProductVersion=0.0.5
+
+[StringFileInfo]
+CompanyName=Tuxxle
+FileDescription=Control/Program Nidec Commander CDE
+FileVersion=0.0.5
+InternalName=CommanderCDE
+LegalCopyright=© Copyright 2024-2025 Nsfr750 - All Rights Reserved
+OriginalFilename=CommanderCDE.exe
+ProductName=Nidec CommanderCDE
+ProductVersion=0.0.5
+
+[VarFileInfo]
+VarFileInfo=$04b00000
+
+[Translation]
+000004b0=00000000
+
+[Setup]
+Version=0.0.5
+Build=1
+ReleaseDate=2025-11-11
+
+[Metadata]
+Description=Application version information
+Type=VersionInfo
+Format=Unicode

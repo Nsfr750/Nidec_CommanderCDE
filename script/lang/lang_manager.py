@@ -52,45 +52,68 @@ class SimpleLanguageManager(QObject):
     def _load_languages(self):
         """Load all available language modules."""
         try:
-            # Import the language modules
+            # In development, __file__ is the .py file, in compiled it's in a different location
+            if getattr(sys, 'frozen', False):
+                # Running in compiled mode with PyInstaller or Nuitka
+                base_path = Path(sys._MEIPASS if hasattr(sys, '_MEIPASS') else sys.executable).parent
+                lang_dir = base_path / 'script' / 'lang'
+            else:
+                # Running in development mode
+                lang_dir = self.lang_dir
             
-            # Look for Python language modules in the lang directory, excluding lang_manager.py
-            lang_files = [f for f in self.lang_dir.glob('lang_*.py') 
+            # Look for Python language modules in the lang directory
+            lang_files = [f for f in lang_dir.glob('lang_*.py') 
                          if f.name not in ['lang_manager.py', '__init__.py']]
             
             if not lang_files:
-                logger.warning(f"No language modules found in {self.lang_dir}")
-                return
+                # Try alternative path for compiled version
+                if lang_dir != self.lang_dir:
+                    lang_dir = self.lang_dir
+                    lang_files = [f for f in lang_dir.glob('lang_*.py') 
+                                if f.name not in ['lang_manager.py', '__init__.py']]
                 
+                if not lang_files:
+                    logger.warning(f"No language modules found in {lang_dir}")
+                    return
+            
             for lang_file in lang_files:
-                # Extract language code from filename (e.g., 'en' from 'lang_en.py')
-                lang_code = lang_file.stem.split('_', 1)[1]
-                module_name = f"lang.lang_{lang_code}"
-                
                 try:
-                    # Dynamically import the module
-                    spec = importlib.util.spec_from_file_location(module_name, lang_file)
-                    if spec is None or spec.loader is None:
-                        raise ImportError(f"Could not load spec for {module_name}")
-                        
-                    module = importlib.util.module_from_spec(spec)
-                    sys.modules[module_name] = module
-                    spec.loader.exec_module(module)
+                    # Extract language code from filename (e.g., 'en' from 'lang_en.py')
+                    lang_code = lang_file.stem.split('_', 1)[1]
                     
-                    # Get the TRANSLATIONS dictionary from the module
-                    if hasattr(module, 'TRANSLATIONS'):
-                        self.translations[lang_code] = module.TRANSLATIONS
+                    # Read the file content
+                    with open(lang_file, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    
+                    # Extract the TRANSLATIONS dictionary using a simple approach
+                    translations = {}
+                    if 'TRANSLATIONS' in content:
+                        # This is a simple approach - for more complex cases, consider using ast.literal_eval
+                        # or a proper parser
+                        start = content.find('TRANSLATIONS = {') + len('TRANSLATIONS = ')
+                        end = content.rfind('}') + 1
+                        if start > 0 and end > 0:
+                            try:
+                                # Use a safe way to evaluate the dictionary
+                                import ast
+                                translations = ast.literal_eval(content[start:end])
+                            except (SyntaxError, ValueError) as e:
+                                logger.error(f"Error parsing translations in {lang_file}: {e}")
+                                continue
+                    
+                    if translations:
+                        self.translations[lang_code] = translations
                         self.available_languages.append({
                             'code': lang_code,
-                            'name': self.translations[lang_code].get('language_name', lang_code.upper())
+                            'name': translations.get('language_name', lang_code.upper())
                         })
                         logger.info(f"Loaded language: {lang_code}")
                     else:
-                        logger.error(f"No TRANSLATIONS dictionary found in {lang_file}")
+                        logger.error(f"No valid translations found in {lang_file}")
                         
                 except Exception as e:
-                    logger.error(f"Error loading language module {lang_file}: {e}")
-                    
+                    logger.error(f"Error loading language file {lang_file}: {e}")
+            
             if not self.translations:
                 logger.error("No valid language modules found")
                 return

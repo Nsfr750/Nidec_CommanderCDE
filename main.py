@@ -17,7 +17,7 @@ Dependencies:
 - serial: For serial port management
 
 Author: Nsfr750
-Version: 0.0.4
+Version: 0.0.5
 """
 
 import sys
@@ -27,7 +27,7 @@ import csv
 import time
 from datetime import datetime
 import serial.tools.list_ports
-from pathlib import Path
+from pathlib import Path        
 from typing import Optional
 
 # Add the script directory to the Python path
@@ -48,9 +48,9 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QIcon
 
 # Local imports
-from nidec_models import get_model_list, get_model_config, FAULT_CODES
-from menu import MainWindow  # Main application window with menu bar
-from lang.lang_manager import SimpleLanguageManager  # Language manager for internationalization
+from script.core.nidec_models import get_model_list, get_model_config, FAULT_CODES
+from script.UI.menu import MainWindow  # Main application window with menu bar
+from script.lang.lang_manager import SimpleLanguageManager  # Language manager for internationalization
 
 # Initialize language manager
 language_manager = SimpleLanguageManager()
@@ -116,7 +116,11 @@ class NidecCommanderGUI(MainWindow):
         
         # Window settings
         self.setWindowTitle(t('app_title', self.current_language))
-        self.setWindowIcon(QIcon("images/icon.png"))
+        icon_path = Path("script/assets/icon.ico")
+        if icon_path.exists():
+            self.setWindowIcon(QIcon(str(icon_path)))
+        else:
+            print(f"Icon not found at: {icon_path.absolute()}")
         self.setMinimumSize(1000, 750)
         
         # Load saved settings
@@ -243,9 +247,15 @@ class NidecCommanderGUI(MainWindow):
         
         # Model selection
         self.model_combo = QComboBox()
-        self.model_combo.addItems(get_model_list())
-        self.model_combo.setCurrentText(self.current_model)
-        self.model_combo.currentTextChanged.connect(self.model_changed)
+        # Get the list of models and add them to the combo box
+        models = get_model_list()
+        for model in models:
+            self.model_combo.addItem(model['name'], model['code'])
+        # Find and set the current model
+        index = self.model_combo.findData(self.current_model)
+        if index >= 0:
+            self.model_combo.setCurrentIndex(index)
+        self.model_combo.currentIndexChanged.connect(self.model_combo_changed)
         
         # Model info display
         self.model_info = QLabel()
@@ -255,11 +265,12 @@ class NidecCommanderGUI(MainWindow):
         layout.addRow("Specifications:", self.model_info)
         self.model_group.setLayout(layout)
     
-    def model_changed(self, model):
+    def model_combo_changed(self, index):
         """Handle model selection change"""
-        self.current_model = model
-        self.model_config = get_model_config(model)
-        self.save_settings()
+        if index >= 0:
+            self.current_model = self.model_combo.itemData(index)
+            self.model_config = get_model_config(self.current_model, self.current_language)
+            self.update_model_info()
         # Update status bar
         self.status_model.setText(f"Model: {self.current_model}")
         self.status_bar.showMessage(f"Model changed to {self.current_model}", 3000)
@@ -272,11 +283,31 @@ class NidecCommanderGUI(MainWindow):
     
     def update_model_info(self):
         """Update model information display"""
-        info = (f"Max Frequency: {self.model_config['max_frequency']} Hz\n"
-                f"Max Current: {self.model_config['max_current']} A\n"
-                f"Power Rating: {self.model_config['power_rating']} kW\n"
-                f"Voltage: {self.model_config['voltage_rating']} V")
-        self.model_info.setText(info)
+        if not self.model_config:
+            self.model_info.setText("No model configuration available")
+            return
+            
+        info_parts = []
+        
+        # Add basic model information
+        info_parts.append(f"Model: {self.current_model}")
+        
+        # Add available configuration parameters
+        if 'max_frequency' in self.model_config:
+            info_parts.append(f"Max Frequency: {self.model_config['max_frequency']} Hz")
+        if 'max_current' in self.model_config:
+            info_parts.append(f"Max Current: {self.model_config['max_current']} A")
+        if 'max_voltage' in self.model_config:
+            info_parts.append(f"Voltage: {self.model_config['max_voltage']} V")
+        if 'default_baudrate' in self.model_config:
+            info_parts.append(f"Default Baudrate: {self.model_config['default_baudrate']}")
+            
+        # Add parameters count if available
+        if 'parameters' in self.model_config and isinstance(self.model_config['parameters'], dict):
+            param_count = len(self.model_config['parameters'])
+            info_parts.append(f"Parameters: {param_count} configurable")
+            
+        self.model_info.setText("\n".join(info_parts))
     
     def create_connection_group(self):
         """Create connection settings group"""
@@ -416,7 +447,9 @@ class NidecCommanderGUI(MainWindow):
         speed_layout = QFormLayout()
         
         self.speed_spin = QDoubleSpinBox()
-        self.speed_spin.setRange(0, self.model_config['max_frequency'])
+        # Set default range (0-400 Hz) and update if model has specific max_frequency
+        max_freq = self.model_config.get('max_frequency', 400.0)  # Default to 400 Hz if not specified
+        self.speed_spin.setRange(0, max_freq)
         self.speed_spin.setSuffix(" Hz")
         self.speed_spin.setValue(0)
         self.speed_spin.setSingleStep(0.1)
@@ -1486,7 +1519,7 @@ if __name__ == "__main__":
     # Set application metadata
     app.setApplicationName("Nidec CommanderCDE")
     app.setOrganizationName("Tuxxle")
-    app.setApplicationVersion("0.0.4")
+    app.setApplicationVersion("0.0.5")
     
     # Create and show the main window
     window = NidecCommanderGUI()

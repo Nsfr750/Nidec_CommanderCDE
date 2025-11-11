@@ -1,0 +1,25 @@
+# This file defines who is responsible for reviewing and approving changes
+# to different parts of the codebase.
+
+# Default owners for the entire repository
+* @Nsfr750
+
+# Documentation
+/docs/ @Nsfr750
+
+# Language files
+/lang/ @Nsfr750
+
+# Main application files
+/main.py @Nsfr750
+/menu.py @Nsfr750
+/nidec_models.py @Nsfr750
+
+# Scripts
+/script/ @Nsfr750
+
+# Tests
+/tests/ @Nsfr750
+
+# GitHub workflows
+/.github/workflows/ @Nsfr750

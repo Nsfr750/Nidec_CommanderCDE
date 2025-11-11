@@ -11,10 +11,18 @@ import importlib
 import sys
 from pathlib import Path
 import logging
+from PyQt6.QtCore import QObject, pyqtSignal
 
 logger = logging.getLogger(__name__)
 
-class SimpleLanguageManager:
+class SimpleLanguageManager(QObject):
+    """A simple language manager that loads translations from Python modules.
+    
+    The manager looks for translation files in the 'lang' directory.
+    Translation files should be named in the format 'lang_XX.py' where XX is the language code.
+    Each module should contain a TRANSLATIONS dictionary with the translations.
+    """
+    language_changed = pyqtSignal()  # Signal emitted when language is changed
     """
     A simple language manager that loads translations from JSON files.
     
@@ -22,14 +30,16 @@ class SimpleLanguageManager:
     Translation files should be named in the format 'lang_XX.json' where XX is the language code.
     """
     
-    def __init__(self, lang_dir=None):
+    def __init__(self, lang_dir=None, parent=None):
         """
         Initialize the language manager.
         
         Args:
             lang_dir (str, optional): Path to the directory containing language modules.
                                     If not provided, defaults to 'lang' in the current directory.
+            parent (QObject, optional): Parent QObject for this manager.
         """
+        super().__init__(parent)  # Initialize QObject
         self.lang_dir = Path(lang_dir) if lang_dir else Path(__file__).parent
         self.translations = {}
         self.available_languages = []
@@ -110,6 +120,7 @@ class SimpleLanguageManager:
             
         self.current_language = lang_code
         logger.info(f"Loaded language: {lang_code}")
+        self.language_changed.emit()  # Emit signal when language changes
         return True
     
     def get_text(self, key, default=None):
@@ -143,15 +154,20 @@ class SimpleLanguageManager:
         """
         return self.current_language
         
-    def tr(self, key, default=None):
+    def tr(self, key, default=None, lang_code=None):
         """
         Get a translated string for the given key.
         
         Args:
             key (str): The translation key
             default (str, optional): Default value if key is not found
+            lang_code (str, optional): Language code to use for translation. 
+                                     If not provided, uses the current language.
             
         Returns:
             str: The translated string or the default value if not found
         """
-        return self.translations.get(key, default)
+        target_lang = lang_code if lang_code else self.current_language
+        if target_lang in self.translations and key in self.translations[target_lang]:
+            return self.translations[target_lang][key]
+        return default if default is not None else key

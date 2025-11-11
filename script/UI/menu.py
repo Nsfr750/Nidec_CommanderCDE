@@ -45,13 +45,13 @@ from PyQt6.QtGui import QCloseEvent, QColor, QPalette, QAction, QKeySequence, QA
 from PyQt6.QtCore import Qt, QSettings, QObject, pyqtSignal
 
 # Local application imports
-from script.help import HelpWindow
-from script.about import AboutDialog
-from script.sponsor import SponsorDialog
-from script.updates import check_for_updates
+from script.UI.help import HelpWindow
+from script.UI.about import AboutDialog
+from script.UI.sponsor import SponsorDialog
+from script.utils.updates import check_updates
 
 # Import language manager
-from lang.lang_manager import SimpleLanguageManager
+from script.lang.lang_manager import SimpleLanguageManager
 
 # Initialize language manager
 language_manager = SimpleLanguageManager()
@@ -107,7 +107,7 @@ class MainWindow(QMainWindow):
         self.current_language = self.settings.value("language", "en")
         
         # Initialize language manager
-        from lang.lang_manager import SimpleLanguageManager
+        from script.lang.lang_manager import SimpleLanguageManager
         self.language_manager = SimpleLanguageManager()
         
         # Set default theme if not set (system, light, or dark)
@@ -188,9 +188,9 @@ class MainWindow(QMainWindow):
         self.language_group.setExclusive(True)
         
         # Add available languages
-        for lang_code in language_manager.get_available_languages():
-            # Get the language name in its own language (e.g., 'English' for 'en')
-            lang_name = language_manager.tr('language_name', lang_code=lang_code, default=lang_code.upper())
+        for lang_info in language_manager.get_available_languages():
+            lang_code = lang_info['code']
+            lang_name = lang_info['name']
             action = QAction(lang_name, self, checkable=True)
             action.setData(lang_code)
             action.triggered.connect(self.change_language)
@@ -233,6 +233,7 @@ class MainWindow(QMainWindow):
         # Help -> Documentation
         help_action = QAction(t('documentation', self.current_language), self)
         help_action.triggered.connect(lambda: self.show_help())
+        help_action.setShortcut(QKeySequence("F1"))  # F1 is commonly used for Help
         help_menu.addAction(help_action)
         
         help_menu.addSeparator()
@@ -240,26 +241,28 @@ class MainWindow(QMainWindow):
         # Help -> About
         about_action = QAction(t('about', self.current_language), self)
         about_action.triggered.connect(lambda: self.show_about())
+        about_action.setShortcut(QKeySequence("F2"))  # F2 is commonly used for About
         help_menu.addAction(about_action)
         
         # Help -> Sponsor
         sponsor_action = QAction(t('sponsor', self.current_language), self)
         sponsor_action.triggered.connect(lambda: self.show_sponsor())
-        help_menu.addAction(sponsor_action)
+        sponsor_action.setShortcut(QKeySequence("F3"))  # F3 is commonly used for Sponsor
+        help_menu.addAction(sponsor_action) 
     
     def show_help(self):
-        from script.help import HelpWindow
+        from script.UI.help import HelpWindow
         self.help_window = HelpWindow(self, self.current_language)
         self.help_window.show()
     
     def show_about(self):
-        from script.about import AboutDialog
+        from script.UI.about import AboutDialog
         about_dialog = AboutDialog(self, self.language_manager)
         about_dialog.exec()
     
     def show_sponsor(self):
         """Show the sponsor dialog."""
-        from script.sponsor import SponsorDialog
+        from script.UI.sponsor import SponsorDialog
         sponsor_dialog = SponsorDialog(self, self.language_manager)
         sponsor_dialog.exec()
         
@@ -447,19 +450,30 @@ class MainWindow(QMainWindow):
                 t('checking_updates_message', self.current_language)
             )
             
-            # Call the update check function
-            check_for_updates(self, self.current_language)
+            # Import the check_updates function from the updates module
+            from script.utils.updates import check_updates
+            
+            # Call the update check function with the current version
+            update_available, message, update_info = check_updates("0.0.5")  # Replace with actual version
+            
+            # Show the result to the user
+            QMessageBox.information(
+                self,
+                t('update_check_complete', self.current_language, 'Update Check Complete'),
+                message
+            )
             
         except Exception as e:
             QMessageBox.critical(
                 self,
-                t('update_error', self.current_language),
-                f"{t('update_error_message', self.current_language)}: {str(e)}"
+                t('update_error', self.current_language, 'Update Error'),
+                f"{t('update_error_message', self.current_language, 'An error occurred while checking for updates:')}: {str(e)}"
             )
     
     def show_sponsor(self):
         """Show the sponsor dialog."""
-        Sponsor.show_sponsor(parent=self, lang=self.current_language)
+        sponsor_dialog = SponsorDialog(parent=self, language_manager=self.language_manager)
+        sponsor_dialog.exec()
 
 if __name__ == "__main__":
     """

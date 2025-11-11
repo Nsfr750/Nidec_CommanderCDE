@@ -1,6 +1,6 @@
 # Nidec CommanderCDE
 
-[![GitHub release](https://img.shields.io/badge/release-v0.0.4-green.svg?style=for-the-badge)](https://github.com/Nsfr750/Nidec_CommanderCDE/releases/latest)
+[![GitHub release](https://img.shields.io/badge/release-v0.0.5-green.svg?style=for-the-badge)](https://github.com/Nsfr750/Nidec_CommanderCDE/releases/latest)
 [![Python Version](https://img.shields.io/badge/python-3.8+-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg?style=for-the-badge)](https://github.com/Nsfr750/Nidec_CommanderCDE/graphs/commit-activity)
@@ -49,7 +49,7 @@ A comprehensive Python GUI application for controlling and monitoring Nidec Comm
   - System status indicators
   - Real-time performance metrics
 
-## 🆕 What's New in v0.0.4
+## 🆕 What's New in v0.0.5
 
 ### New Features
 

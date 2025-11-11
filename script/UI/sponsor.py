@@ -1,3 +1,10 @@
+"""
+Sponsor Dialog for Nidec CommanderCDE
+
+This module provides the Sponsor dialog that displays information about
+supporting the development of Nidec CommanderCDE.
+"""
+
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QLabel, QPushButton, 
                              QHBoxLayout, QTextBrowser, QApplication, QWidget,
                              QGridLayout, QSizePolicy)
@@ -11,9 +18,10 @@ import logging
 from wand.image import Image as WandImage
 from wand.drawing import Drawing
 from wand.color import Color
+from pathlib import Path
 
 # Import language manager
-from lang.lang_manager import SimpleLanguageManager
+from script.lang.lang_manager import SimpleLanguageManager
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +36,13 @@ class SponsorDialog(QDialog):
         
         layout = QVBoxLayout(self)
         
+        # Set window icon if available
+        icon_path = Path("script/assets/icon.ico")
+        if icon_path.exists():
+            self.setWindowIcon(QIcon(str(icon_path)))
+
         # Title
-        title = QLabel(self.tr("sponsor.title", "Support PDF Duplicate Finder"))
+        title = QLabel(self.tr("sponsor.title", "Support Nidec CommanderCDE"))
         title.setStyleSheet("font-size: 18px; font-weight: bold; margin-bottom: 20px;")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)

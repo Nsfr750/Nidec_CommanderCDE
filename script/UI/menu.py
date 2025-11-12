@@ -275,10 +275,20 @@ class MainWindow(QMainWindow):
         sponsor_dialog = SponsorDialog(self, self.language_manager)
         sponsor_dialog.exec()
         
+    def get_resource_path(self, relative_path):
+        """Get the correct path to a resource file, whether running as script or frozen executable."""
+        if getattr(sys, 'frozen', False):
+            # Running as compiled executable
+            base_path = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+            return os.path.join(base_path, relative_path)
+        else:
+            # Running as script
+            script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            return os.path.join(script_dir, relative_path)
+            
     def open_simulator(self):
         """Open the Nidec Commander Simulator in a separate process."""
         try:
-            
             # Check if simulator is already running
             if hasattr(self, '_simulator_process') and self._simulator_process.state() == QProcess.ProcessState.Running:
                 QMessageBox.information(
@@ -288,15 +298,11 @@ class MainWindow(QMainWindow):
                 )
                 return
                 
-            # Get the base directory based on whether we're running as a PyInstaller bundle
+            # Get the simulator path using our resource path helper
             if getattr(sys, 'frozen', False):
-                # Running as PyInstaller bundle
-                base_dir = sys._MEIPASS
-                # In the bundle, the simulator is in the root directory
-                simulator_path = os.path.join(base_dir, 'simulator.py')
-                # Also try the UI directory for backward compatibility
-                if not os.path.exists(simulator_path):
-                    simulator_path = os.path.join(base_dir, 'UI', 'simulator.py')
+                # In the compiled version, the simulator is in the script/UI directory
+                simulator_path = self.get_resource_path('script/UI/simulator.py')
+                script_dir = os.path.dirname(os.path.dirname(os.path.abspath(simulator_path)))
             else:
                 # Running in development
                 script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -320,22 +326,27 @@ class MainWindow(QMainWindow):
             
             # Set up the environment
             env = QProcessEnvironment.systemEnvironment()
-            env.insert("PYTHONPATH", os.pathsep.join(sys.path))
+            
+            # Add the script directory to PYTHONPATH for the subprocess
+            python_path = os.pathsep.join([script_dir] + sys.path)
+            env.insert("PYTHONPATH", python_path)
+            
+            # Set the process environment
             self._simulator_process.setProcessEnvironment(env)
             
             # Connect signals
             self._simulator_process.finished.connect(self.on_simulator_finished)
             self._simulator_process.errorOccurred.connect(self.on_simulator_error)
             
-            # Start the simulator with the -Xfrozen_modules=off flag
+            # Get the Python executable path
             python_executable = sys.executable
             if sys.platform == 'win32':
-                # On Windows, we need to use the pythonw.exe to avoid a console window
+                # On Windows, use pythonw.exe to avoid a console window
                 pythonw = os.path.join(os.path.dirname(python_executable), 'pythonw.exe')
                 if os.path.exists(pythonw):
                     python_executable = pythonw
             
-            # Start the process
+            # Start the process with the simulator script
             self._simulator_process.start(python_executable, [simulator_path])
             
             # Wait for the process to start

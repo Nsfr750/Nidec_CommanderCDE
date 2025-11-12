@@ -6,38 +6,64 @@ from PyQt6.QtWidgets import (QMainWindow, QApplication, QMenuBar, QMenu,
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QAction, QIcon, QFont
 
+def get_resource_path(relative_path):
+    """Get the correct path to a resource file, whether running as script or frozen executable."""
+    if getattr(sys, 'frozen', False):
+        # Running as compiled executable
+        base_path = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+        return os.path.join(base_path, relative_path)
+    else:
+        # Running as script
+        script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        return os.path.join(script_dir, relative_path)
+
 # Add the project root to the Python path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, project_root)
-
-# Add the script directory to the Python path
 script_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, script_dir)
+
+# Add paths to sys.path in a way that works for both development and compiled versions
+paths_to_add = [
+    project_root,
+    script_dir,
+    os.path.join(project_root, 'script'),
+    os.path.join(project_root, 'script', 'utils')
+]
+
+for path in paths_to_add:
+    if path not in sys.path:
+        sys.path.insert(0, path)
 
 # Import simulator components
 try:
-    # Add the parent directory to the path
-    parent_dir = os.path.dirname(script_dir)
-    if parent_dir not in sys.path:
-        sys.path.insert(0, parent_dir)
-    
     from script.utils.inverter_sim import InverterSimulato
     from script.utils.serial_handler import SerialHandler
 except ImportError as e:
-    print(f"Errore importando componenti del simulatore: {e}")
-    print(f"Python path: {sys.path}")
-    print(f"Current directory: {os.getcwd()}")
-    print(f"Script directory: {script_dir}")
-    print(f"Project root: {project_root}")
-    raise
+    # If import fails, try direct import (for compiled version)
+    try:
+        from utils.inverter_sim import InverterSimulato
+        from utils.serial_handler import SerialHandler
+    except ImportError as e2:
+        print(f"Error importing simulator components: {e}")
+        print(f"Second attempt error: {e2}")
+        print(f"Python path: {sys.path}")
+        print(f"Current directory: {os.getcwd()}")
+        print(f"Script directory: {script_dir}")
+        print(f"Project root: {project_root}")
+        raise
 
 class SimulatorWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.inverter = InverterSimulato()
-        self.serial_handler = SerialHandler(self.inverter)
-        self.init_ui()
-        self.setup_timer()
+        try:
+            self.inverter = InverterSimulato()
+            self.serial_handler = SerialHandler(self.inverter)
+            self.init_ui()
+            self.setup_timer()
+        except Exception as e:
+            print(f"Error initializing simulator: {e}")
+            print(f"Current working directory: {os.getcwd()}")
+            print(f"Script directory: {os.path.dirname(os.path.abspath(__file__))}")
+            raise
         
     def init_ui(self):
         main_layout = QHBoxLayout(self)
@@ -288,16 +314,9 @@ class MainWindow(QMainWindow):
 
 def main():
     try:
-        # Create the application
         app = QApplication(sys.argv)
-        
-        # Set application style
-        app.setStyle('Fusion')
-        
-        # Create and show the main window
-        window = MainWindow()
+        window = SimulatorWindow()
         window.show()
-        
         # Start the application event loop
         return app.exec()
         

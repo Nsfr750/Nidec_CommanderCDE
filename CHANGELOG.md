@@ -9,13 +9,13 @@
 
 ## [0.0.5] - 2025-11-11
 
-### Added
+### Added 0.0.5
 
 - Implemented parameter backup/restore functionality
 - Added support for custom parameter presets
 - Enhanced error handling and user feedback
 
-### Fixed
+### Fixed 0.0.5
 
 - Resolved issues with language switching
 - Fixed UI alignment in parameter tables
@@ -23,20 +23,20 @@
 
 ## [0.0.4] - 2025-07-02
 
-### Added
+### Added 0.0.4
 
 - Support for multiple Nidec drive models (CDE400, CDE550, CDE750, CDE1100S)
 - Complete Italian translations for all UI elements
 - Enhanced help system with detailed documentation
 - Blue theme for better readability in help sections
 
-### Changed
+### Changed 0.0.4
 
 - Updated UI for better user experience
 - Improved error messages and logging
 - Optimized performance for real-time monitoring
 
-### Fixed
+### Fixed 0.0.4
 
 - Resolved issues with PyQt6 compatibility
 - Fixed language switching in help dialogs

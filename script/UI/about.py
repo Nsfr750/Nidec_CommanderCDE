@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayo
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QPixmap, QIcon
 import os
+import sys
 from pathlib import Path
 
 class AboutDialog(QDialog):
@@ -27,24 +28,31 @@ class AboutDialog(QDialog):
         self.setMinimumSize(400, 300)
         
         # Set window icon if available
-        icon_path = Path("script/assets/icon.ico")
-        if icon_path.exists():
-            self.setWindowIcon(QIcon(str(icon_path)))
-        
         self.setup_ui()
+        
+        # Set window icon after setup_ui to ensure paths are resolved
+        icon_path = self.get_resource_path("script/assets/icon.ico")
+        if icon_path and os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
         
     def setup_ui(self):
         """Set up the UI components."""
         layout = QVBoxLayout(self)
         
         # Application icon/logo
-        logo_path = Path("script/assets/logo.png")
-        if logo_path.exists():
-            logo_label = QLabel()
-            pixmap = QPixmap(str(logo_path))
-            logo_label.setPixmap(pixmap.scaled(100, 100, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-            logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            layout.addWidget(logo_label)
+        logo_path = self.get_resource_path("script/assets/logo.png")
+        if logo_path and os.path.exists(logo_path):
+            try:
+                logo_label = QLabel()
+                pixmap = QPixmap(logo_path)
+                if not pixmap.isNull():
+                    logo_label.setPixmap(pixmap.scaled(100, 100, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+                    logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                    layout.addWidget(logo_label)
+                else:
+                    print(f"Warning: Failed to load logo from {logo_path}")
+            except Exception as e:
+                print(f"Error loading logo: {e}")
         
         # Application title and version
         title_label = QLabel("Nidec CommanderCDE")
@@ -81,3 +89,14 @@ class AboutDialog(QDialog):
         if self.language_manager:
             return self.language_manager.tr(text, default=text)
         return text
+        
+    def get_resource_path(self, relative_path):
+        """Get the correct path to a resource file, whether running as script or frozen executable."""
+        if getattr(sys, 'frozen', False):
+            # Running as compiled executable
+            base_path = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+            return os.path.join(base_path, relative_path)
+        else:
+            # Running as script
+            script_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            return os.path.join(script_dir, relative_path)

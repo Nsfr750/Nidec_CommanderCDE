@@ -8,7 +8,7 @@
 [![Tests](https://img.shields.io/badge/tests-passing-green?style=for-the-badge)](https://github.com/Nsfr750/Nidec_CommanderCDE/actions)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen?style=for-the-badge)](https://codecov.io/gh/Nsfr750/Nidec_CommanderCDE)
 
-![Nidec CommanderCDE Screenshot](images/screenshot.png)
+![Nidec CommanderCDE Screenshot](script/assets/screenshot.png)
 
 A comprehensive Python GUI application for controlling and monitoring Nidec Commander CDE drives via Modbus RTU.
 

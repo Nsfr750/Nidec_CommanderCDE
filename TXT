@@ -25,5 +25,4 @@ python build.py -v
 python build.py --output MyApp
 ---------------------------------------------------------------------------
 improve /script/utils/version.py
-Il tasto chiudi deve sempre essere in basso a destra con sfondo rosso e testo bianco
 aggiorna README.md, CHANGELOG.md docs/README.md, docs/user_guide.md, docs/ROADNAP.md per la versione 0.0.5

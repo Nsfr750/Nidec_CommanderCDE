@@ -353,15 +353,27 @@ def main():
 
 def run_simulator():
     """Run the simulator as a standalone application."""
-    try:
-        result = main()
-        print(f"Simulator exited with code: {result}")
-        return result
-    except Exception as e:
-        import traceback
-        error_msg = f"Unhandled exception in run_simulator: {str(e)}\n\nTraceback:\n{traceback.format_exc()}"
-        print(error_msg, file=sys.stderr)
-        return 1
+    import sys
+    from PyQt6.QtWidgets import QApplication
+    
+    # Create application instance
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+    
+    # Create and show main window
+    window = SimulatorWidget()
+    window.show()
+    
+    # Store reference to window to prevent garbage collection
+    app._window = window
+    
+    # Start event loop
 
 if __name__ == '__main__':
-    run_simulator()
+    # Ensure the application doesn't close immediately
+    app = QApplication.instance() or QApplication(sys.argv)
+    simulator = SimulatorWidget()
+    simulator.show()
+    app._window = simulator  # Keep reference to prevent garbage collection
+    sys.exit(app.exec())

@@ -1,6 +1,7 @@
 # Troubleshooting Guide
 
 ## Table of Contents
+
 1. [Connection Issues](#connection-issues)
 2. [Communication Problems](#communication-problems)
 3. [Application Errors](#application-errors)
@@ -11,11 +12,14 @@
 ## Connection Issues
 
 ### Cannot Find COM Port
+
 **Symptoms:**
+
 - No COM ports listed in the dropdown
 - "No available ports found" message
 
 **Solutions:**
+
 1. **Check Physical Connections**
    - Ensure the USB cable is properly connected
    - Try a different USB port
@@ -33,11 +37,14 @@
    - Right-click and select "Update driver" if needed
 
 ### Connection Drops
+
 **Symptoms:**
+
 - Intermittent disconnections
 - "Connection lost" errors
 
 **Solutions:**
+
 1. Check cable connections
 2. Try a different USB port (preferably USB 2.0)
 3. Disable USB power saving:
@@ -51,11 +58,14 @@
 ## Communication Problems
 
 ### No Response from Drive
+
 **Symptoms:**
+
 - "No response from drive" error
 - Parameters not updating
 
 **Solutions:**
+
 1. **Verify Settings**
    - Check baud rate matches drive settings (typically 19200)
    - Verify COM port selection
@@ -74,12 +84,16 @@
 ## Application Errors
 
 ### Application Crashes on Startup
+
 **Symptoms:**
+
 - Application fails to start
 - Immediate crash with error message
 
 **Solutions:**
+
 1. **Check Dependencies**
+
    ```bash
    pip install -r requirements.txt
    ```
@@ -93,11 +107,14 @@
    - Check Windows Event Viewer for application crashes
 
 ### UI Freezing
+
 **Symptoms:**
+
 - Interface becomes unresponsive
 - "Not Responding" in window title
 
 **Solutions:**
+
 1. **Reduce Update Rate**
    - Decrease the polling interval in settings
    - Disable unused monitoring features
@@ -107,6 +124,7 @@
    - Check for graphics driver updates
 
 3. **Run with Debug Mode**
+
    ```bash
    python -X faulthandler main.py
    ```
@@ -114,11 +132,14 @@
 ## Performance Issues
 
 ### High CPU Usage
+
 **Symptoms:**
+
 - Application uses excessive CPU
 - System becomes sluggish
 
 **Solutions:**
+
 1. **Optimize Settings**
    - Increase polling interval
    - Reduce number of monitored parameters
@@ -129,11 +150,14 @@
    - Check for malware or other resource-intensive processes
 
 ### Memory Leaks
+
 **Symptoms:**
+
 - Application memory usage grows over time
 - System becomes slow after prolonged use
 
 **Solutions:**
+
 1. **Restart Application**
    - Close and reopen the application periodically
    - Consider using the built-in memory management features
@@ -145,20 +169,27 @@
 ## Frequently Asked Questions
 
 ### Q: How do I update the application?
-A: 
+
+A:
+
 1. Backup your configuration
 2. Pull the latest changes from the repository
 3. Update dependencies:
+
    ```bash
    pip install -r requirements.txt
    ```
+
 4. Restore your configuration if needed
 
 ### Q: Can I use this with non-Nidec drives?
+
 A: The application is specifically designed for Nidec CDE series drives. While it uses standard protocols like Modbus RTU, compatibility with other drives is not guaranteed.
 
 ### Q: How do I enable debug logging?
+
 A: Run the application with the `--debug` flag:
+
 ```bash
 python main.py --debug
 ```
@@ -166,12 +197,15 @@ python main.py --debug
 ## Getting Help
 
 ### Support Channels
+
 - **GitHub Issues**: [Create a new issue](https://github.com/Nsfr750/Nidec_CommanderCDE/issues)
 - **Discord**: [Join our server](https://discord.gg/ryqNeuRYjD)
-- **Email**: nsfr750@yandex.com
+- **Email**: [nsfr750@yandex.com](mailto:nsfr750@yandex.com)
 
 ### When Requesting Help
+
 Please provide the following information:
+
 1. Application version
 2. Operating system version
 3. Drive model and firmware version
@@ -180,5 +214,6 @@ Please provide the following information:
 6. Screenshots if applicable
 
 ---
-*Last updated: 2025-09-01*
+
+*Last updated: 2025-09-01*  
 *© 2025 Nsfr750 - All rights reserved*

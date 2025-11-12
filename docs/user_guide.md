@@ -26,13 +26,13 @@
 1. Download and install Python from [python.org](https://www.python.org/downloads/)
 2. Install required packages:
 
-   ```
+   ```bash
    pip install -r requirements.txt
    ```
 
 3. Launch the application:
 
-   ```
+   ```bash
    python main.py
    ```
 
@@ -58,6 +58,7 @@ The main window is divided into several sections:
 ## Monitoring Drive Status
 
 The dashboard provides real-time information about the drive's status:
+
 - Output frequency (Hz)
 - Output current (A)
 - DC bus voltage (V)
@@ -125,5 +126,7 @@ The dashboard provides real-time information about the drive's status:
 ### Getting Help
 
 For additional support:
+
 - Check the [Troubleshooting Guide](troubleshooting.md)
+
 - Open an issue on [GitHub](https://github.com/Nsfr750/Nidec_CommanderCDE/issues)

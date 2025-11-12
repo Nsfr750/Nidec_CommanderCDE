@@ -44,6 +44,13 @@ from PyQt6.QtWidgets import (
     QHeaderView, QGridLayout
 )
 
+# Import the logger utility
+from script.utils.logger import get_logger
+
+# Initialize logger for the main module
+logger = get_logger(__name__)
+logger.info("Starting Nidec Commander CDE application")
+
 # No sip import needed for PyQt6
 from PyQt6.QtGui import QIcon
 

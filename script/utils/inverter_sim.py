@@ -1,9 +1,26 @@
+"""
+Nidec Inverter Simulator
+
+This module provides a simulated Nidec inverter for testing and development purposes.
+It emulates the behavior of a real Nidec drive, including various operating states,
+fault conditions, and parameter adjustments.
+"""
+
 import random
 import time
+import logging
+import json
+import os
+import csv
 from enum import Enum, auto
-from dataclasses import dataclass
-from typing import Dict, Optional, List
+from dataclasses import dataclass, asdict, field
+from typing import Dict, Optional, List, Tuple, Callable, Any
 import threading
+from pathlib import Path
+from dataclasses_json import dataclass_json
+from script.utils.logger import get_logger
+logger = get_logger(__name__)
+logger.info("Inverter simulator initialized")
 
 class StatoInverter(Enum):
     SPENTO = auto()
@@ -25,24 +42,61 @@ class CodiceAllarme(Enum):
     GUASTO_HARDWARE = 8
     COMUNICAZIONE = 9
 
+@dataclass_json
 @dataclass
 class Allarme:
+    """Class representing an alarm/error condition in the inverter."""
     codice: CodiceAllarme
     descrizione: str
-    timestamp: float
+    timestamp: float = field(default_factory=time.time)
     attivo: bool = True
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert alarm to dictionary."""
+        return {
+            'codice': self.codice.name,
+            'descrizione': self.descrizione,
+            'timestamp': self.timestamp,
+            'attivo': self.attivo
+        }
 
 class InverterSimulato:
-    def __init__(self):
-        # Parametri di configurazione
-        self.frequenza_nominale = 50.0  # Hz
-        self.tensione_nominale = 400.0  # V
-        self.corrente_nominale = 10.0   # A
-        self.velocità_nominale = 1500.0  # RPM
+    """
+    Simulates a Nidec inverter with realistic behavior including:
+    - Motor control (start/stop/speed/direction)
+    - Fault conditions and alarms
+    - Parameter monitoring and adjustment
+    - Data logging and telemetry
+    """
+    
+    # Default configuration
+    DEFAULT_CONFIG = {
+        'frequenza_nominale': 50.0,    # Hz
+        'tensione_nominale': 400.0,    # V
+        'corrente_nominale': 10.0,     # A
+        'velocita_nominale': 1500.0,   # RPM
+        'temperatura_max': 80.0,       # °C
+        'tensione_min': 350.0,         # V
+        'tensione_max': 450.0,         # V
+        'corrente_max': 15.0,          # A
+        'rampa_accelerazione': 10.0,   # Hz/s
+        'rampa_decelerazione': 10.0,   # Hz/s
+        'fattore_potenza': 0.95,       # PF
+    }
+    
+    def __init__(self, config: Optional[Dict[str, float]] = None):
+        # Load configuration
+        self.config = {**self.DEFAULT_CONFIG, **(config or {})}
+        
+        # Operational parameters
+        self.frequenza_nominale = self.config['frequenza_nominale']
+        self.tensione_nominale = self.config['tensione_nominale']
+        self.corrente_nominale = self.config['corrente_nominale']
+        self.velocita_nominale = self.config['velocita_nominale']
         
         # Parametri operativi
         self.frequenza_uscita = 0.0    # Hz
-        self.tensione_uscita = 0.0    # V
+        self.tensione_uscita = self.tensione_nominale  # Set to nominal voltage to avoid low voltage alarm
         self.corrente_uscita = 0.0     # A
         self.velocita_motore = 0.0   # RPM
         self.coppia = 0.0               # Nm
@@ -52,7 +106,7 @@ class InverterSimulato:
         self.tempo_attivazione = 0.0    # ore
         self.conteggio_avviamenti = 0   # n°
         
-        # Stato e controllo
+        # State and control
         self.stato = StatoInverter.PRONTO
         self.direzione = 1              # 1 = avanti, -1 = indietro
         self.comando_remoto = False
@@ -62,6 +116,20 @@ class InverterSimulato:
         self.descrizione_allarme = "Nessun allarme"
         self.allarmi: List[Allarme] = []
         
+        # Callbacks for state changes
+        self._state_change_callbacks = []
+        self._alarm_callbacks = []
+        
+        # Ensure logs directory exists at the root of the application
+        self._log_dir = Path(__file__).parent.parent.parent / "logs"
+        self._log_dir.mkdir(exist_ok=True, parents=True)
+        
+        # Data logging
+        self._log_enabled = True
+        self._log_file = str(self._log_dir / "inverter_log.csv")
+        self._log_interval = 1.0  # seconds
+        self._last_log_time = 0
+        
         # Parametri di simulazione
         self._tempo_inizio = time.time()
         self._ultimo_aggiornamento = time.time()
@@ -69,35 +137,51 @@ class InverterSimulato:
         self._tensione_obiettivo = 0.0
         self._velocita_obiettivo = 0.0
         
-        # Inizializza i parametri di default
-        self.reset()
-        
         # Imposta valori iniziali coerenti
         self._frequenza_obiettivo = 0.0
         self._tensione_obiettivo = 0.0
         self._velocita_obiettivo = 0.0
         
-        # Avvia il timer per l'aggiornamento periodico
-        self._aggiorna_timer = None
-        self._avvia_timer_aggiornamento()
-    
-    def _avvia_timer_aggiornamento(self):
-        """Avvia il timer per l'aggiornamento periodico dello stato"""
-        def _aggiorna_periodicamente():
-            while True:
-                self.aggiorna()
-                time.sleep(0.1)  # Aggiorna ogni 100ms
+        # Start update timer
+        self._update_timer = None
+        self._running = True
+        self._start_update_timer()
         
-        self._aggiorna_timer = threading.Thread(target=_aggiorna_periodicamente, daemon=True)
-        self._aggiorna_timer.start()
+        logger.info("Inverter simulator initialized")
+    
+    def _start_update_timer(self):
+        """Start the periodic update timer"""
+        def _periodic_update():
+            while self._running:
+                start_time = time.time()
+                try:
+                    self.update()
+                    self._log_data()
+                except Exception as e:
+                    logger.error(f"Error in update loop: {e}")
+                
+                # Sleep to maintain approximately 10Hz update rate
+                elapsed = time.time() - start_time
+                sleep_time = max(0.01, 0.1 - elapsed)  # Target 10Hz (0.1s)
+                time.sleep(sleep_time)
+        
+        self._update_timer = threading.Thread(target=_periodic_update, daemon=True)
+        self._update_timer.start()
     
     def reset(self):
-        """Resetta l'inverter allo stato di pronto"""
+        """Reset the inverter to initial state"""
         self.frequenza_uscita = 0.0
         self.tensione_uscita = 0.0
         self.corrente_uscita = 0.0
         self.velocita_motore = 0.0
         self.coppia = 0.0
+        self.potenza_uscita = 0.0
+        self.temperatura = 25.0
+        self.stato = StatoInverter.PRONTO
+        self.allarme_attivo = False
+        self.descrizione_allarme = "Nessun allarme"
+        self.allarmi.clear()
+        self._notify_state_change()
         self.potenza_uscita = 0.0
         self.temperatura = 25.0
         self.stato = StatoInverter.PRONTO
@@ -110,265 +194,400 @@ class InverterSimulato:
         self._tensione_obiettivo = 0.0
         self._velocita_obiettivo = 0.0
     
-    def avvia(self):
-        """Avvia l'inverter"""
-        if not self.allarme_attivo and self.stato == StatoInverter.PRONTO:
+    def ferma(self) -> bool:
+        """
+        Ferma l'inverter
+        
+        Returns:
+            bool: True se l'arresto è stato avviato, False altrimenti
+        """
+        if self.stato in (StatoInverter.IN_MARCIA, StatoInverter.ACCELERAZIONE):
+            self.stato = StatoInverter.DECELERAZIONE
+            self._notify_state_change()
+            logger.info("Arresto inverter avviato")
+            return True
+        return False
+    
+    def avvia(self) -> bool:
+        """
+        Avvia l'inverter
+        
+        Returns:
+            bool: True se l'avvio è riuscito, False altrimenti
+        """
+        if self.stato == StatoInverter.PRONTO and not self.allarme_attivo:
             self.stato = StatoInverter.ACCELERAZIONE
-            self._frequenza_obiettivo = self.frequenza_nominale
-            self._tensione_obiettivo = self.tensione_nominale
-            # Usare la frequenza nominale invece di frequenza_uscita per il calcolo iniziale
-            self._velocita_obiettivo = self.velocità_nominale * (self._frequenza_obiettivo / self.frequenza_nominale)
             self.in_marcia = True
             self.conteggio_avviamenti += 1
+            self._notify_state_change()
+            logger.info("Inverter avviato")
             return True
+        logger.warning("Impossibile avviare l'inverter: stato=%s, allarme=%s", 
+                      self.stato, self.allarme_attivo)
         return False
     
-    def ferma(self):
-        """Ferma l'inverter"""
-        print(f"DEBUG - ferma() called. Current state: {self.stato}, in_marcia: {self.in_marcia}")
-        if self.stato in [StatoInverter.IN_MARCIA, StatoInverter.ACCELERAZIONE, StatoInverter.DECELERAZIONE]:
-            print(f"DEBUG - Setting state to DECELERAZIONE and targets to 0")
-            self.stato = StatoInverter.DECELERAZIONE
-            self._frequenza_obiettivo = 0.0
-            self._tensione_obiettivo = 0.0
-            self._velocita_obiettivo = 0.0
-            # Don't set in_marcia to False here, let it be handled by the state machine
-            print(f"DEBUG - After ferma() - state: {self.stato}, in_marcia: {self.in_marcia}")
-            return True
-        print(f"DEBUG - ferma() did nothing, current state is {self.stato}")
-        return False
-    
-    def imposta_frequenza(self, frequenza: float):
-        """Imposta la frequenza di uscita"""
-        if 0 <= frequenza <= 400:  # Limiti tipici per un inverter
-            self._frequenza_obiettivo = min(frequenza, self.frequenza_nominale)
-            self._velocita_obiettivo = self.velocità_nominale * (self._frequenza_obiettivo / self.frequenza_nominale)
-            self._tensione_obiettivo = self.tensione_nominale * (self._frequenza_obiettivo / self.frequenza_nominale)
+    def imposta_frequenza(self, frequenza: float) -> bool:
+        """
+        Imposta la frequenza di uscita
+        
+        Args:
+            frequenza: Frequenza in Hz (0-frequenza_nominale)
             
-            if self.stato == StatoInverter.IN_MARCIA and frequenza > 0:
-                self.stato = StatoInverter.ACCELERAZIONE
-            elif self.stato == StatoInverter.IN_MARCIA and frequenza == 0:
-                self.stato = StatoInverter.DECELERAZIONE
+        Returns:
+            bool: True se la frequenza è stata impostata, False se fuori range
+        """
+        if 0 <= frequenza <= self.frequenza_nominale:
+            self._frequenza_obiettivo = frequenza
+            logger.debug("Frequenza obiettivo impostata a %.1f Hz", frequenza)
+            return True
+        logger.warning("Frequenza %.1f Hz fuori range (0-%.1f)", 
+                      frequenza, self.frequenza_nominale)
+        return False
     
-    def cambia_direzione(self, direzione: int):
-        """Cambia la direzione di rotazione (1 = avanti, -1 = indietro)"""
-        if direzione in [-1, 1]:
-            self.direzione = direzione
-            if self.in_marcia and self.frequenza_uscita > 0:
-                self.ferma()
-                time.sleep(1)  # Breve pausa prima di cambiare direzione
-                self.avvia()
-    
-    def aggiorna(self):
-        """Aggiorna lo stato del simulatore"""
+    def update(self):
+        """
+        Aggiorna lo stato del simulatore
+        
+        Questo metodo dovrebbe essere chiamato periodicamente per aggiornare
+        lo stato dell'inverter in base al tempo trascorso.
+        """
         now = time.time()
-        dt = now - self._ultimo_aggiornamento
+        dt = min(0.2, now - self._ultimo_aggiornamento)  # Limita dt per evitare salti eccessivi
         self._ultimo_aggiornamento = now
         
-        # Aggiorna il tempo di attivazione
-        if self.in_marcia:
-            self.tempo_attivazione += dt / 3600.0  # Converti in ore
-        
-        # Simula il comportamento dinamico
-        self._simula_comportamento(dt)
-        
-        # Aggiorna i parametri di uscita
-        self._aggiorna_parametri_uscita()
-        
-        # Simula variazioni casuali
-        self._simula_variazioni_casuali()
-        
-        # Controlla condizioni di allarme
-        self._controlla_allarmi()
-        
-        # Aggiorna lo stato
-        self._aggiorna_stato()
+        try:
+            # Aggiorna il tempo di attivazione
+            if self.in_marcia:
+                self.tempo_attivazione += dt / 3600.0  # Converti in ore
+            
+            # Simula il comportamento dell'inverter
+            self._simulate_behavior(dt)
+            
+            # Aggiungi variazioni casuali per realismo
+            self._simulate_random_variations()
+            
+            # Controlla gli allarmi
+            self._check_alarms()
+            
+            # Aggiorna lo stato
+            self._update_state()
+            
+        except Exception as e:
+            logger.error(f"Errore durante l'aggiornamento: {e}", exc_info=True)
+            # In caso di errore, metti l'inverter in stato di allarme
+            if not self.allarme_attivo:
+                self._add_alarm(CodiceAllarme.GUASTO_SOFTWARE, 
+                              f"Errore software: {str(e)}")
     
-    def _simula_comportamento(self, dt: float):
-        """Simula il comportamento dinamico dell'inverter"""
-        # Costanti di tempo per la simulazione (in secondi)
-        TAU_FREQUENZA = 0.5  # Costante di tempo per la variazione di frequenza
-        TAU_TENSIONE = 0.3   # Costante di tempo per la variazione di tensione
-        TAU_VELOCITA = 1.0   # Costante di tempo per la variazione di velocità
+    def _simulate_behavior(self, dt: float):
+        """
+        Simula il comportamento dinamico dell'inverter
         
-        # Aggiornamento esponenziale verso il valore obiettivo
-        alpha_f = 1.0 - (1.0 / (1.0 + dt / TAU_FREQUENZA))
-        alpha_v = 1.0 - (1.0 / (1.0 + dt / TAU_VELOCITA))
-        
-        # Aggiorna frequenza
-        self.frequenza_uscita += alpha_f * (self._frequenza_obiettivo - self.frequenza_uscita)
-        
-        # Aggiorna tensione (V/f costante)
-        self.tensione_uscita = self.tensione_nominale * (self.frequenza_uscita / self.frequenza_nominale)
-        
-        # Aggiorna velocità del motore
-        rapporto_carico = 0.7  # Simula un carico costante
-        velocita_teorica = self.velocità_nominale * (self.frequenza_uscita / self.frequenza_nominale)
-        self.velocita_motore = velocita_teorica * (1 - 0.2 * rapporto_carico)  # Scorrimento del 20% a pieno carico
-        
-        # Aggiorna corrente e coppia in base al carico
-        if self.frequenza_uscita > 0.1:  # Soglia per evitare divisioni per zero
-            if self.stato == StatoInverter.ACCELERAZIONE:
-                # Durante l'accelerazione, aumenta gradualmente la corrente
-                rapporto_carico = min(1.0, 0.2 + 0.8 * (self.frequenza_uscita / self.frequenza_nominale))
-                self.corrente_uscita = min(
-                    self.corrente_nominale * rapporto_carico,
-                    self.corrente_nominale * 1.2  # Limita la corrente massima al 120% del nominale
-                )
+        Args:
+            dt: Tempo trascorso dall'ultimo aggiornamento (secondi)
+        """
+        # Aggiorna la frequenza in base allo stato
+        if self.stato == StatoInverter.ACCELERAZIONE:
+            # Accelerazione con rampa
+            ramp_rate = self.config['rampa_accelerazione']  # Hz/s
+            freq_step = ramp_rate * dt
+            
+            if self.frequenza_uscita < self._frequenza_obiettivo:
+                self.frequenza_uscita = min(self._frequenza_obiettivo, 
+                                          self.frequenza_uscita + freq_step)
             else:
-                # A regime, mantieni la corrente al valore nominale
-                rapporto_carico = min(1.0, 0.2 + 0.8 * (self.frequenza_uscita / self.frequenza_nominale))
-                self.corrente_uscita = self.corrente_nominale * rapporto_carico
+                self.stato = StatoInverter.IN_MARCIA
+                self._notify_state_change()
                 
-            # Calcola la coppia solo se la velocità è sufficientemente alta
-            if self.velocita_motore > 0.1:
-                self.coppia = (self.potenza_uscita * 60) / (2 * 3.14159 * self.velocita_motore)
-            else:
-                self.coppia = 0.0
-        else:
-            self.corrente_uscita = 0.0
-            self.coppia = 0.0
-        
-        # Aggiorna potenza in uscita (solo se l'inverter è in funzione)
-        if self.in_marcia:
-            self.potenza_uscita = self.tensione_uscita * self.corrente_uscita * self.fattore_potenza
-        else:
-            self.potenza_uscita = 0.0
-        
-        # Aggiorna temperatura (aumenta con la potenza, si raffredda a riposo)
-        delta_temp = (self.potenza_uscita / 1000.0) * dt - (self.temperatura - 25.0) * 0.001 * dt
-        self.temperatura = max(25.0, min(90.0, self.temperatura + delta_temp))
-    
-    def _aggiorna_parametri_uscita(self):
-        """Aggiorna i parametri di uscita in base allo stato attuale"""
-        # Nessuna azione necessaria qui, gestito in _simula_comportamento
-        pass
-    
-    def _simula_variazioni_casuali(self):
-        """Aggiunge piccole variazioni casuali per simulare il comportamento reale"""
-        if self.in_marcia:
-            # Piccole variazioni casuali
-            self.frequenza_uscita += random.uniform(-0.05, 0.05)
-            self.tensione_uscita += random.uniform(-0.5, 0.5)
-            self.corrente_uscita += random.uniform(-0.01, 0.01) * self.corrente_nominale
-            self.velocita_motore += random.uniform(-1.0, 1.0)
-            
-            # Limita i valori entro limiti ragionevoli
-            self.frequenza_uscita = max(0, min(self.frequenza_nominale, self.frequenza_uscita))
-            self.tensione_uscita = max(0, min(self.tensione_nominale * 1.1, self.tensione_uscita))
-            self.corrente_uscita = max(0, min(self.corrente_nominale * 1.5, self.corrente_uscita))
-            self.velocita_motore = max(0, self.velocita_motore)
-    
-    def _controlla_allarmi(self):
-        """Controlla le condizioni di allarme"""
-        # Se l'inverter è spento o in stato di pronto, non controllare gli allarmi
-        if self.stato == StatoInverter.SPENTO or self.stato == StatoInverter.PRONTO:
-            self.allarme_attivo = False
-            self.descrizione_allarme = "Nessun allarme"
-            return
-            
-        # Resetta lo stato di allarme prima di verificare le condizioni
-        self.allarme_attivo = False
-        
-        # Debug: Stampa i valori attuali per il debug
-        print(f"DEBUG - Stato: {self.stato}, In marcia: {self.in_marcia}, Corrente: {self.corrente_uscita}, Max: {self.corrente_nominale * 1.5}")
-        
-        # Controlla sovracorrente (solo se l'inverter è in funzione)
-        if self.in_marcia and self.corrente_uscita > self.corrente_nominale * 1.5:
-            print(f"DEBUG - Allarme sovracorrente: {self.corrente_uscita} > {self.corrente_nominale * 1.5}")
-            self._aggiungi_allarme(CodiceAllarme.SOVRACORRENTE, "Sovracorrente rilevata")
-        
-        # Controlla sovratensione (solo se l'inverter è in funzione)
-        if self.in_marcia and self.tensione_uscita > self.tensione_nominale * 1.15:  # +15%
-            print(f"DEBUG - Allarme sovratensione: {self.tensione_uscita} > {self.tensione_nominale * 1.15}")
-            self._aggiungi_allarme(CodiceAllarme.SOVRATENSIONE, "Sovratensione rilevata")
-            
-        # Controlla sottotensione (solo se l'inverter è in funzione)
-        tensione_attesa = self.tensione_nominale * (self.frequenza_uscita / self.frequenza_nominale)
-        if self.in_marcia and self.frequenza_uscita > 5:  # Solo se la frequenza è significativa
-            if self.tensione_uscita < tensione_attesa * 0.8:  # -20% dalla tensione attesa
-                print(f"DEBUG - Allarme sottotensione: {self.tensione_uscita} < {tensione_attesa * 0.8} (attesa: {tensione_attesa})")
-                self._aggiungi_allarme(CodiceAllarme.SOTTOTENSIONE, "Sottotensione rilevata")
-            
-        # Controlla sovratemperatura (sempre attivo)
-        if self.temperatura > 80.0:  # °C
-            print(f"DEBUG - Allarme sovratemperatura: {self.temperatura} > 80.0")
-            self._aggiungi_allarme(CodiceAllarme.SOVRATEMPERATURA, "Sovratemperatura rilevata")
-            
-        # Controlla guasto rete (sempre attivo)
-        if not self.rete_attiva:
-            print("DEBUG - Allarme rete")
-            self._aggiungi_allarme(CodiceAllarme.GUASTO_INGRESSO, "Guasto rete di alimentazione")
-            
-        # Se ci sono allarmi attivi, aggiorna lo stato
-        if any(allarme.attivo for allarme in self.allarmi):
-            self.allarme_attivo = True
-            self.descrizione_allarme = ", ".join(allarme.descrizione 
-                                              for allarme in self.allarmi 
-                                              if allarme.attivo)
-            print(f"DEBUG - Allarme attivato: {self.descrizione_allarme}")
-    
-    def _aggiorna_stato(self):
-        """Aggiorna lo stato dell'inverter in base alle condizioni attuali"""
-        old_state = self.stato
-        old_in_marcia = self.in_marcia
-        
-        if self.allarme_attivo:
-            self.stato = StatoInverter.ALLARME
-            if old_state != self.stato:
-                print(f"DEBUG - State changed from {old_state} to {self.stato} (ALARM)")
-            return
-        
-        # Update in_marcia based on frequency and target frequency
-        if abs(self.frequenza_uscita) < 0.1 and abs(self._frequenza_obiettivo) < 0.1:
-            new_state = StatoInverter.PRONTO
-            self.in_marcia = False
         elif self.stato == StatoInverter.DECELERAZIONE:
-            if abs(self.frequenza_uscita) > 0.1:
-                new_state = StatoInverter.DECELERAZIONE
+            # Decelerazione con rampa
+            ramp_rate = self.config['rampa_decelerazione']  # Hz/s
+            freq_step = ramp_rate * dt
+            
+            if self.frequenza_uscita > 0.1:  # Soglia minima
+                self.frequenza_uscita = max(0, self.frequenza_uscita - freq_step)
             else:
-                new_state = StatoInverter.PRONTO
+                self.frequenza_uscita = 0
+                self.stato = StatoInverter.PRONTO
                 self.in_marcia = False
-        elif self.in_marcia:
-            if abs(self.frequenza_uscita - self._frequenza_obiettivo) < 0.1:
-                new_state = StatoInverter.IN_MARCIA
-            else:
-                new_state = StatoInverter.ACCELERAZIONE
+                self._notify_state_change()
+        
+        # Calcola la tensione in base alla frequenza (V/f costante)
+        if self.frequenza_uscita > 0:
+            v_f_ratio = self.tensione_nominale / self.frequenza_nominale
+            self.tensione_uscita = self.frequenza_uscita * v_f_ratio
         else:
-            # If we're not in_marcia but frequency is > 0, we should be decelerating
-            if abs(self.frequenza_uscita) > 0.1:
-                new_state = StatoInverter.DECELERAZIONE
-            else:
-                new_state = StatoInverter.PRONTO
+            # Mantieni la tensione nominale anche a frequenza 0 per evitare allarmi di bassa tensione
+            self.tensione_uscita = self.tensione_nominale
         
-        # Log state changes
-        if old_state != new_state or old_in_marcia != self.in_marcia:
-            print(f"DEBUG - State: {old_state}->{new_state}, in_marcia: {old_in_marcia}->{self.in_marcia}, "
-                  f"freq: {self.frequenza_uscita:.1f}, target: {self._frequenza_obiettivo:.1f}")
+        # Calcola la corrente in base al carico
+        # Per semplicità, assumiamo un carico quadratico
+        load_factor = (self.frequenza_uscita / self.frequenza_nominale) ** 2
+        self.corrente_uscita = load_factor * self.corrente_nominale * (0.9 + 0.2 * random.random())
         
-        self.stato = new_state
+        # Calcola la velocità del motore
+        slip = 0.02  # 2% di scorrimento a pieno carico
+        sync_speed = (120 * self.frequenza_uscita) / 2  # Per un motore a 2 poli
+        self.velocita_motore = sync_speed * (1 - slip * load_factor)
+        
+        # Calcola la coppia (semplificato)
+        self.coppia = (self.potenza_uscita * 9.549) / (self.velocita_motore + 0.001)  # Evita divisione per zero
+        
+        # Calcola la potenza in uscita
+        self.potenza_uscita = (self.tensione_uscita * self.corrente_uscita * 
+                              self.fattore_potenza / 1000.0)  # kWecondi)
     
-    def _aggiungi_allarme(self, codice: CodiceAllarme, descrizione: str):
-        """Aggiunge un allarme alla lista"""
-        # Verifica se l'allarme è già presente
-        for allarme in self.allarmi:
-            if allarme.codice == codice and allarme.attivo:
-                return  # Allarme già presente
-        
-        # Aggiunge il nuovo allarme
-        self.allarmi.append(Allarme(
-            codice=codice,
-            descrizione=descrizione,
-            timestamp=time.time(),
-            attivo=True
-        ))
-        
-        # Se è un allarme grave, ferma l'inverter
-        if codice != CodiceAllarme.NESSUNO:
-            self.ferma()
-    
-    def reset_allarmi(self):
-        """Resetta tutti gli allarmi"""
-        self.allarmi = [a for a in self.allarmi if not a.attivo]
+    def _check_alarms(self):
+        """Controlla le condizioni di allarme"""
+        # Resetta lo stato di allarme precedente
+        prev_alarm = self.allarme_attivo
         self.allarme_attivo = False
         self.descrizione_allarme = "Nessun allarme"
+        
+        # Controlla i vari tipi di allarme
+        alarms = []
+        
+        # Sovracorrente
+        if self.corrente_uscita > self.config['corrente_max'] * 1.1:
+            alarms.append((CodiceAllarme.SOVRACORRENTE, 
+                         f"Sovracorrente: {self.corrente_uscita:.1f}A > {self.config['corrente_max']}A"))
+        
+        # Sottotensione
+        if self.tensione_uscita < self.config['tensione_min'] * 0.9:
+            alarms.append((CodiceAllarme.SOTTOTENSIONE,
+                         f"Sottotensione: {self.tensione_uscita:.1f}V < {self.config['tensione_min']}V"))
+        
+        # Sovratensione
+        if self.tensione_uscita > self.config['tensione_max'] * 1.1:
+            alarms.append((CodiceAllarme.SOVRATENSIONE,
+                         f"Sovratensione: {self.tensione_uscita:.1f}V > {self.config['tensione_max']}V"))
+        
+        # Sovratemperatura
+        if self.temperatura > self.config['temperatura_max']:
+            alarms.append((CodiceAllarme.SOVRATEMPERATURA,
+                         f"Sovratemperatura: {self.temperatura:.1f}°C > {self.config['temperatura_max']}°C"))
+        
+        # Gestisci gli allarmi rilevati
+        for code, desc in alarms:
+            if not any(a.codice == code and a.attivo for a in self.allarmi):
+                self._add_alarm(code, desc)
+        
+        # Aggiorna lo stato di allarme
+        self.allarme_attivo = any(a.attivo for a in self.allarmi)
+        
+        # Se c'è un allarme attivo, ferma l'inverter
+        if self.allarme_attivo and not prev_alarm:
+            self.stato = StatoInverter.ALLARME
+            self.in_marcia = False
+            logger.warning("Allarme attivato: %s", self.descrizione_allarme)
+            self._notify_alarm()
+        elif not self.allarme_attivo and prev_alarm:
+            logger.info("Tutti gli allarmi sono stati risolti")
+    
+    def _update_state(self):
+        """Aggiorna lo stato dell'inverter in base alle condizioni attuali"""
+        prev_state = self.stato
+        
+        # Logica di transizione di stato
+        if self.allarme_attivo:
+            self.stato = StatoInverter.ALLARME
+        elif self.stato == StatoInverter.ALLARME and not self.allarme_attivo:
+            self.stato = StatoInverter.PRONTO
+        elif self.stato == StatoInverter.ACCELERAZIONE and abs(self.frequenza_uscita - self._frequenza_obiettivo) < 0.1:
+            self.stato = StatoInverter.IN_MARCIA
+        elif self.stato == StatoInverter.DECELERAZIONE and self.frequenza_uscita <= 0.1:
+            self.stato = StatoInverter.PRONTO
+            self.in_marcia = False
+        
+        # Notifica i listener se lo stato è cambiato
+        if self.stato != prev_state:
+            logger.info("Stato inverter cambiato da %s a %s", prev_state, self.stato)
+            self._notify_state_change()
+    
+    def _add_alarm(self, code: CodiceAllarme, description: str):
+        """
+        Aggiunge un allarme alla lista
+        
+        Args:
+            code: Codice dell'allarme
+            description: Descrizione testuale dell'allarme
+        """
+        # Cerca se esiste già un allarme simile non attivo
+        for alarm in self.allarmi:
+            if alarm.codice == code and not alarm.attivo:
+                alarm.attivo = True
+                alarm.timestamp = time.time()
+                alarm.descrizione = description
+                break
+        else:
+            # Aggiungi un nuovo allarme
+            alarm = Allarme(
+                codice=code,
+                descrizione=description,
+                timestamp=time.time(),
+                attivo=True
+            )
+            self.allarmi.append(alarm)
+        
+        # Aggiorna lo stato di allarme
+        self.allarme_attivo = True
+        self.descrizione_allarme = description
+        logger.warning("Allarme: %s", description)
+        
+        # Notifica i listener
+        self._notify_alarm()
+    
+    def reset_allarmi(self) -> bool:
+        """
+        Resetta tutti gli allarmi
+        
+        Returns:
+            bool: True se gli allarmi sono stati resettati, False altrimenti
+        """
+        if not self.allarme_attivo:
+            return False
+            
+        for allarme in self.allarmi:
+            allarme.attivo = False
+            
+        self.allarme_attivo = False
+        self.descrizione_allarme = "Nessun allarme"
+        
+        # Riporta l'inverter in stato di pronto se era in allarme
+        if self.stato == StatoInverter.ALLARME:
+            self.stato = StatoInverter.PRONTO
+            
+        logger.info("Tutti gli allarmi sono stati resettati")
+        self._notify_state_change()
+    
+    def _simulate_random_variations(self):
+        """Aggiunge variazioni casuali ai parametri per simulare il comportamento reale"""
+        # Variazione casuale della temperatura
+        temp_change = (random.random() - 0.5) * 0.1  # +/- 0.05°C
+        if self.in_marcia:
+            # Aumenta la temperatura quando l'inverter è in funzione
+            temp_change += 0.01 * self.frequenza_uscita / self.frequenza_nominale
+        self.temperatura = max(20.0, min(90.0, self.temperatura + temp_change))
+        
+        # Piccole variazioni casuali di tensione e corrente
+        if self.tensione_uscita > 0:
+            self.tensione_uscita *= (0.995 + 0.01 * random.random())
+            self.corrente_uscita *= (0.98 + 0.04 * random.random())
+    
+    def _log_data(self):
+        """Logga i dati correnti dell'inverter"""
+        if not self._log_enabled:
+            return
+            
+        now = time.time()
+        if now - self._last_log_time >= self._log_interval:
+            self._last_log_time = now
+            
+            log_entry = {
+                'timestamp': now,
+                'stato': self.stato.name,
+                'frequenza': self.frequenza_uscita,
+                'tensione': self.tensione_uscita,
+                'corrente': self.corrente_uscita,
+                'velocita': self.velocita_motore,
+                'temperatura': self.temperatura,
+                'allarme_attivo': self.allarme_attivo,
+                'descrizione_allarme': self.descrizione_allarme
+            }
+            
+            try:
+                file_exists = os.path.exists(self._log_file)
+                with open(self._log_file, 'a', newline='') as f:
+                    writer = csv.DictWriter(f, fieldnames=log_entry.keys())
+                    if not file_exists:
+                        writer.writeheader()
+                    writer.writerow(log_entry)
+            except Exception as e:
+                logger.error(f"Errore durante il salvataggio del log: {e}")
+    
+    def _notify_state_change(self):
+        """Notifica i listener del cambiamento di stato"""
+        for callback in self._state_change_callbacks:
+            try:
+                callback(self.stato)
+            except Exception as e:
+                logger.error(f"Errore nel callback di stato: {e}")
+    
+    def _notify_alarm(self):
+        """Notifica i listener di un nuovo allarme"""
+        active_alarms = [a for a in self.allarmi if a.attivo]
+        for callback in self._alarm_callbacks:
+            try:
+                callback(active_alarms[-1] if active_alarms else None)
+            except Exception as e:
+                logger.error(f"Errore nel callback di allarme: {e}")
+    
+    def add_state_change_callback(self, callback: Callable[[StatoInverter], None]):
+        """
+        Aggiunge un callback per i cambiamenti di stato
+        
+        Args:
+            callback: Funzione da chiamare quando lo stato cambia.
+                     Riceve il nuovo stato come parametro.
+        """
+        if callback not in self._state_change_callbacks:
+            self._state_change_callbacks.append(callback)
+    
+    def add_alarm_callback(self, callback: Callable[[Optional[Allarme]], None]):
+        """
+        Aggiunge un callback per i nuovi allarmi
+        
+        Args:
+            callback: Funzione da chiamare quando viene rilevato un nuovo allarme.
+                     Riceve l'oggetto Allarme come parametro, o None se tutti gli allarmi sono stati risolti.
+        """
+        if callback not in self._alarm_callbacks:
+            self._alarm_callbacks.append(callback)
+    
+    def inject_fault(self, fault_type: str, description: str = None):
+        """
+        Inietta un guasto simulato nell'inverter.
+        
+        Args:
+            fault_type: Tipo di guasto da iniettare (es. 'overcurrent', 'overtemp', 'undervoltage', 'overvoltage', 'communication')
+            description: Descrizione opzionale del guasto
+            
+        Returns:
+            bool: True se il guasto è stato iniettato con successo, False altrimenti
+        """
+        fault_type = fault_type.lower()
+        
+        if fault_type == 'overcurrent':
+            self.corrente_uscita = self.config['corrente_max'] * 1.5  # 150% of max current
+            self._add_alarm(CodiceAllarme.SOVRACORRENTE, description or "Overcurrent fault injected")
+            return True
+            
+        elif fault_type == 'overtemp':
+            self.temperatura = self.config['temperatura_max'] + 10.0  # 10°C above max
+            self._add_alarm(CodiceAllarme.SOVRATEMPERATURA, description or "Overtemperature fault injected")
+            return True
+            
+        elif fault_type == 'undervoltage':
+            self.tensione_uscita = self.config['tensione_min'] * 0.8  # 20% below min
+            self._add_alarm(CodiceAllarme.SOTTOTENSIONE, description or "Undervoltage fault injected")
+            return True
+            
+        elif fault_type == 'overvoltage':
+            self.tensione_uscita = self.config['tensione_max'] * 1.2  # 20% above max
+            self._add_alarm(CodiceAllarme.SOVRATENSIONE, description or "Overvoltage fault injected")
+            return True
+            
+        elif fault_type == 'communication':
+            self._add_alarm(CodiceAllarme.COMUNICAZIONE, description or "Communication fault injected")
+            return True
+            
+        elif fault_type == 'reset':
+            # Reset all faults
+            self.reset_allarmi()
+            self.tensione_uscita = self.config['tensione_nominale']
+            self.corrente_uscita = 0.0
+            self.temperatura = 25.0
+            return True
+            
+        return False
+        return True

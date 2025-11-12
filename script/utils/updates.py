@@ -9,8 +9,10 @@ import json
 import urllib.request
 import platform
 import os
+import time
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Any
+from datetime import datetime, timedelta
 
 # Import language manager for translations
 from script.lang.lang_manager import SimpleLanguageManager
@@ -37,6 +39,7 @@ class UpdateChecker:
     # GitHub repository information
     REPO_OWNER = "Nsfr750"
     REPO_NAME = "Nidec_CommanderCDE"
+    CONFIG_FILE = Path(__file__).parent.parent.parent / "config" / "updates.json"
     
     def __init__(self, current_version: str):
         """Initialize the update checker.
@@ -48,13 +51,110 @@ class UpdateChecker:
         self.latest_version = None
         self.release_notes = ""
         self.download_url = None
+        
+        # Ensure config directory exists
+        self.CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
     
-    def check_for_updates(self) -> Tuple[bool, str]:
+    def _load_config(self) -> Dict[str, Any]:
+        """Load the update configuration from file.
+        
+        Returns:
+            Dict: The loaded configuration
+        """
+        default_config = {
+            "last_checked": "",
+            "last_version": None,
+            "dont_ask_until": None
+        }
+        
+        try:
+            if self.CONFIG_FILE.exists():
+                with open(self.CONFIG_FILE, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                    # Ensure all required keys exist
+                    for key in default_config:
+                        if key not in config:
+                            config[key] = default_config[key]
+                    return config
+        except (json.JSONDecodeError, IOError) as e:
+            logger.error(f"Error loading update config: {e}")
+            
+        return default_config
+    
+    def _save_config(self, config: Dict[str, Any]) -> bool:
+        """Save the update configuration to file.
+        
+        Args:
+            config: The configuration to save
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            with open(self.CONFIG_FILE, 'w', encoding='utf-8') as f:
+                json.dump(config, f, indent=4, ensure_ascii=False)
+            return True
+        except IOError as e:
+            logger.error(f"Error saving update config: {e}")
+            return False
+    
+    def should_check_for_updates(self) -> bool:
+        """Check if we should check for updates based on the last check time.
+        
+        Returns:
+            bool: True if we should check for updates, False otherwise
+        """
+        config = self._load_config()
+        
+        # If we have a "don't ask until" date in the future, don't check
+        if config["dont_ask_until"]:
+            try:
+                dont_ask_until = datetime.fromisoformat(config["dont_ask_until"])
+                if datetime.now() < dont_ask_until:
+                    return False
+            except (ValueError, TypeError):
+                pass
+                
+        # If we've never checked or it's been more than a day since last check
+        if not config["last_checked"]:
+            return True
+            
+        try:
+            last_checked = datetime.fromisoformat(config["last_checked"])
+            return (datetime.now() - last_checked) > timedelta(days=1)
+        except (ValueError, TypeError):
+            return True
+    
+    def update_last_checked(self, dont_ask_until: str = None) -> None:
+        """Update the last checked timestamp in the config.
+        
+        Args:
+            dont_ask_until: Optional ISO format datetime string to not ask again until
+        """
+        config = self._load_config()
+        config["last_checked"] = datetime.now().isoformat()
+        if dont_ask_until:
+            config["dont_ask_until"] = dont_ask_until
+        self._save_config(config)
+    
+    def check_for_updates(self, force: bool = False) -> Tuple[bool, str]:
         """Check if a newer version is available.
         
+        Args:
+            force: If True, force a check even if we recently checked
+            
         Returns:
             Tuple[bool, str]: (update_available, message)
         """
+        # Check if we should skip the update check
+        if not force and not self.should_check_for_updates():
+            config = self._load_config()
+            if config["last_version"] and self._compare_versions(
+                self.current_version, config["last_version"]) < 0:
+                return True, t('update_available', 'en', 
+                            f'Version {config["last_version"]} is available!')
+            return False, t('no_updates', 'en', 'You are using the latest version')
+        
         try:
             # Get the latest release information from GitHub
             api_url = f"https://api.github.com/repos/{self.REPO_OWNER}/{self.REPO_NAME}/releases/latest"
@@ -71,6 +171,12 @@ class UpdateChecker:
                 if 'assets' in data and len(data['assets']) > 0:
                     self.download_url = data['assets'][0].get('browser_download_url')
                 
+                # Save the latest version to config
+                config = self._load_config()
+                config["last_checked"] = datetime.now().isoformat()
+                config["last_version"] = self.latest_version
+                self._save_config(config)
+                
                 # Compare versions
                 if self._compare_versions(self.current_version, self.latest_version) < 0:
                     return True, t('update_available', 'en', f'Version {self.latest_version} is available!')
@@ -78,6 +184,7 @@ class UpdateChecker:
                     return False, t('no_updates', 'en', 'You are using the latest version')
                     
         except Exception as e:
+            logger.error(f"Error checking for updates: {e}")
             return False, t('update_check_error', 'en', f'Error checking for updates: {str(e)}')
     
     def download_update(self, download_dir: str = None) -> Tuple[bool, str]:

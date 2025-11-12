@@ -6,6 +6,12 @@ import re
 from typing import Optional, Callable, Dict, Any
 from dataclasses import dataclass
 
+# Import the logger utility
+from script.utils.logger import get_logger
+
+# Initialize logger for this module
+logger = get_logger(__name__)
+
 @dataclass
 class ComandoSeriale:
     comando: str
@@ -14,6 +20,11 @@ class ComandoSeriale:
     handler: Optional[Callable[[str], str]] = None
 
 class SerialHandler:
+    @property
+    def connected(self) -> bool:
+        """Check if the serial connection is active."""
+        return self._connected and self.serial_port and self.serial_port.is_open
+        
     def __init__(self, inverter, port: str = None, baudrate: int = 9600):
         self.inverter = inverter
         self.port = port
@@ -21,6 +32,7 @@ class SerialHandler:
         self.serial_port: Optional[serial.Serial] = None
         self.running = False
         self.thread: Optional[threading.Thread] = None
+        self._connected = False  # Tracks connection state
         
         # Mappa dei comandi supportati (comando: risposta o handler)
         self.comandi: Dict[str, ComandoSeriale] = {
@@ -72,6 +84,56 @@ class SerialHandler:
         if not self.port:
             self._trova_porta_com()
     
+    def connect(self, port: str = None, baudrate: int = None):
+        """Connect to the serial port."""
+        if port:
+            self.port = port
+        if baudrate:
+            self.baudrate = baudrate
+            
+        if not self.port:
+            self._trova_porta_com()
+            
+        if not self.port:
+            raise ValueError("No port specified")
+            
+        try:
+            self.disconnect()  # Ensure any existing connection is closed
+            self.serial_port = serial.Serial(
+                port=self.port,
+                baudrate=self.baudrate,
+                bytesize=serial.EIGHTBITS,
+                parity=serial.PARITY_NONE,
+                stopbits=serial.STOPBITS_ONE,
+                timeout=1.0,
+                write_timeout=1.0
+            )
+            self.running = True
+            self._connected = True
+            self.thread = threading.Thread(target=self._read_serial)
+            self.thread.daemon = True
+            self.thread.start()
+            return True
+        except Exception as e:
+            print(f"Error connecting to {self.port}: {e}")
+            self._connected = False
+            self.disconnect()
+            return False
+    
+    def disconnect(self):
+        """Disconnect from the serial port."""
+        self.running = False
+        self._connected = False
+        if self.thread and self.thread.is_alive():
+            self.thread.join(timeout=1.0)
+        if self.serial_port:
+            try:
+                if self.serial_port.is_open:
+                    self.serial_port.close()
+            except:
+                pass
+            self.serial_port = None
+    
     def _trova_porta_com(self):
         """Cerca una porta COM disponibile"""
         ports = serial.tools.list_ports.comports()
@@ -81,41 +143,6 @@ class SerialHandler:
         else:
             # Se non ci sono porte COM, usa una porta virtuale (solo per testing)
             self.port = "COM3"  # Modifica se necessario
-    
-    def start(self):
-        """Avvia il gestore della porta seriale"""
-        if self.running:
-            return
-            
-        try:
-            self.serial_port = serial.Serial(
-                port=self.port,
-                baudrate=self.baudrate,
-                bytesize=serial.EIGHTBITS,
-                parity=serial.PARITY_NONE,
-                stopbits=serial.STOPBITS_ONE,
-                timeout=1,
-                xonxoff=0,
-                rtscts=0
-            )
-            
-            self.running = True
-            self.thread = threading.Thread(target=self._read_serial, daemon=True)
-            self.thread.start()
-            print(f"Serial handler avviato su {self.port} a {self.baudrate} baud")
-            
-        except Exception as e:
-            print(f"Errore nell'apertura della porta seriale {self.port}: {e}")
-            self.running = False
-    
-    def stop(self):
-        """Ferma il gestore della porta seriale"""
-        self.running = False
-        if self.thread and self.thread.is_alive():
-            self.thread.join(timeout=1.0)
-        
-        if self.serial_port and self.serial_port.is_open:
-            self.serial_port.close()
     
     def _read_serial(self):
         """Legge i dati dalla porta seriale e li elabora"""

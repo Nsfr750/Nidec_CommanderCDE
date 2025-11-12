@@ -10,10 +10,10 @@ import json
 import importlib
 import sys
 from pathlib import Path
-import logging
 from PyQt6.QtCore import QObject, pyqtSignal
+from script.utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 class SimpleLanguageManager(QObject):
     """A simple language manager that loads translations from Python modules.

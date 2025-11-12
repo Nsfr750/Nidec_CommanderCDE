@@ -18,7 +18,8 @@ Nidec_CommanderCDE/
 │   ├── SECURITY.md             # Security policy
 │   ├── STRUCTURE.md            # This file
 │   ├── troubleshooting.md      # Troubleshooting guide
-│   └── user_guide.md           # User documentation          
+│   └── user_guide.md           # User documentation 
+├── logs/                       # Log files
 ├── script/                     # Utility scripts
 │   ├── assets/                 # Application assets (images, icons, etc.)
 |   │   ├── __init__.py         # Assets initialization
@@ -46,6 +47,7 @@ Nidec_CommanderCDE/
 │   ├── utils/                  # Utility scripts 
 |   │   ├── __init__.py         # Utils initialization
 |   │   ├── inverter_sim.py     # Inverter simulator
+|   │   ├── logger.py           # Logger utility
 |   │   ├── serial_handler.py   # Serial port handler
 |   │   ├── updates.py          # Update system
 |   │   └── version.py          # Version information

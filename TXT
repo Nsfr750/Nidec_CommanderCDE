@@ -1,3 +1,4 @@
+---------------------------------------------------------------------------
 py -m venv venv
 .\venv\Scripts\activate
 py -m pip install -r requirements.txt   # Install dependencies
@@ -22,3 +23,6 @@ python build.py -v
 
 # Custom output filename
 python build.py --output MyApp
+---------------------------------------------------------------------------
+improve /script/utils/version.py
+Il tasto chiudi deve sempre essere in basso a destra con sfondo rosso e testo bianco

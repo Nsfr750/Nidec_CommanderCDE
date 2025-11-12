@@ -307,93 +307,26 @@ class MainWindow(QMainWindow):
             return os.path.join(script_dir, relative_path)
             
     def open_simulator(self):
-        """Open the Nidec Commander Simulator in a separate process."""
+        """Open the Nidec Commander Simulator window."""
         try:
-            # Check if simulator is already running
-            if hasattr(self, '_simulator_process') and self._simulator_process.state() == QProcess.ProcessState.Running:
-                QMessageBox.information(
-                    self,
-                    t('info', self.current_language, 'Information'),
-                    t('simulator_already_running', self.current_language, 'The simulator is already running')
-                )
+            # Check if simulator window is already open
+            if hasattr(self, 'simulator_window') and self.simulator_window.isVisible():
+                self.simulator_window.activateWindow()
+                self.simulator_window.raise_()
                 return
                 
-            # Get the simulator path using our resource path helper
-            if getattr(sys, 'frozen', False):
-                # In the compiled version, the simulator is in the script/UI directory
-                simulator_path = self.get_resource_path('script/UI/simulator.py')
-                script_dir = os.path.dirname(os.path.dirname(os.path.abspath(simulator_path)))
-            else:
-                # Running in development
-                script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                simulator_path = os.path.join(script_dir, 'UI', 'simulator.py')
+            # Import and create the simulator window
+            from script.UI.simulator import SimulatorWidget
+            self.simulator_window = SimulatorWidget()
+            self.simulator_window.setWindowTitle(t('open_simulator', self.current_language, 'Nidec Commander Simulator'))
+            self.simulator_window.show()
             
-            # Check if the simulator file exists
-            if not os.path.exists(simulator_path):
-                QMessageBox.critical(
-                    self,
-                    t('error', self.current_language, 'Error'),
-                    t('simulator_not_found', self.current_language, 
-                      'Simulator not found at: {}').format(simulator_path)
-                )
-                return
-                
-            # Create a new process for the simulator
-            self._simulator_process = QProcess()
-            
-            # Set the working directory to the script directory
-            self._simulator_process.setWorkingDirectory(script_dir)
-            
-            # Set up the environment
-            env = QProcessEnvironment.systemEnvironment()
-            
-            # Add the script directory to PYTHONPATH for the subprocess
-            python_path = os.pathsep.join([script_dir] + sys.path)
-            env.insert("PYTHONPATH", python_path)
-            
-            # Set the process environment
-            self._simulator_process.setProcessEnvironment(env)
-            
-            # Connect signals
-            self._simulator_process.finished.connect(self.on_simulator_finished)
-            self._simulator_process.errorOccurred.connect(self.on_simulator_error)
-            
-            # Get the Python executable path
-            python_executable = sys.executable
-            if sys.platform == 'win32':
-                # On Windows, use pythonw.exe to avoid a console window
-                pythonw = os.path.join(os.path.dirname(python_executable), 'pythonw.exe')
-                if os.path.exists(pythonw):
-                    python_executable = pythonw
-            
-            # Start the process with the simulator script
-            self._simulator_process.start(python_executable, [simulator_path])
-            
-            # Wait for the process to start
-            if not self._simulator_process.waitForStarted(5000):  # 5 second timeout
-                error = self._simulator_process.error()
-                error_str = {
-                    QProcess.ProcessError.FailedToStart: "Failed to start",
-                    QProcess.ProcessError.Crashed: "Crashed",
-                    QProcess.ProcessError.Timedout: "Timed out",
-                    QProcess.ProcessError.WriteError: "Write error",
-                    QProcess.ProcessError.ReadError: "Read error",
-                    QProcess.ProcessError.UnknownError: "Unknown error"
-                }.get(error, f"Error code: {error}")
-                
-                raise Exception(f"Failed to start simulator process: {error_str}")
-                
         except Exception as e:
-            error_message = str(e)
-            if hasattr(self, '_simulator_process'):
-                error_message += f"\n\nProcess error: {self._simulator_process.errorString()}"
-                error_message += f"\n\nProcess output:\n{self._simulator_process.readAllStandardError().data().decode('utf-8', 'ignore')}"
-                
             QMessageBox.critical(
                 self,
                 t('error', self.current_language, 'Error'),
                 t('error_launching_simulator', self.current_language, 
-                  'Error launching simulator: {}').format(error_message)
+                  'Error launching simulator: {}').format(str(e))
             )
     
     def on_simulator_finished(self, exit_code, exit_status):

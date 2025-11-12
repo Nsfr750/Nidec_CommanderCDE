@@ -187,6 +187,158 @@ class SimulatorWidget(QMainWindow):
         self.log_timer = QTimer()
         self.status_timer = QTimer()
         
+        # Apply optimized dark theme for better readability
+        self.setStyleSheet("""
+            /* Base colors */
+            QMainWindow, QDialog, QWidget, QTabWidget::pane, QTabBar::tab:selected {
+                background-color: #1e1e1e;  /* Slightly darker background for better contrast */
+                color: #f0f0f0;  /* Brighter text for better readability */
+                selection-background-color: #3d6e94;  /* Blue selection color */
+                selection-color: #ffffff;
+            }
+            
+            /* Text elements */
+            QLabel, QCheckBox, QRadioButton, QGroupBox, QLabel#titleLabel {
+                color: #f0f0f0;  /* Brighter text */
+                font-size: 9pt;  /* Slightly larger font */
+            }
+            
+            /* Group boxes */
+            QGroupBox {
+                border: 1px solid #3a3a3a;
+                border-radius: 4px;
+                margin-top: 1.5em;  /* More spacing above group boxes */
+                padding: 10px 5px 5px 5px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+                color: #4db8ff;  /* Light blue for group titles */
+                font-weight: bold;
+            }
+            
+            /* Buttons */
+            QPushButton {
+                background-color: #2d2d2d;
+                color: #f0f0f0;
+                border: 1px solid #3a3a3a;
+                border-radius: 4px;
+                padding: 6px 16px;
+                min-width: 90px;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #3a3a3a;
+                border-color: #4a4a4a;
+            }
+            QPushButton:pressed {
+                background-color: #1e1e1e;
+            }
+            QPushButton:disabled {
+                background-color: #252525;
+                color: #6a6a6a;
+                border-color: #2d2d2d;
+            }
+            
+            /* Input fields */
+            QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QTextEdit, QPlainTextEdit {
+                background-color: #252525;  /* Slightly lighter than main background */
+                color: #f0f0f0;
+                border: 1px solid #3a3a3a;
+                border-radius: 3px;
+                padding: 5px 8px;
+                selection-background-color: #3d6e94;
+            }
+            QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
+                border: 1px solid #4a90d9;  /* Highlight focused fields */
+            }
+            
+            /* Progress bars */
+            QProgressBar {
+                border: 1px solid #3a3a3a;
+                border-radius: 3px;
+                background-color: #252525;
+                text-align: center;
+                color: #f0f0f0;
+            }
+            QProgressBar::chunk {
+                background-color: #4a90d9;  /* Brighter blue for better visibility */
+                width: 10px;
+                margin: 0.5px;
+                border-radius: 2px;
+            }
+            
+            /* Tabs */
+            QTabWidget::pane {
+                border: 1px solid #3a3a3a;
+                top: 1px;
+                padding: 5px;
+            }
+            QTabBar::tab {
+                background: #2d2d2d;
+                color: #a0a0a0;
+                border: 1px solid #3a3a3a;
+                border-bottom: none;
+                padding: 6px 12px;
+                margin-right: 2px;
+                border-top-left-radius: 4px;
+                border-top-right-radius: 4px;
+                min-width: 80px;
+            }
+            QTabBar::tab:selected {
+                background: #1e1e1e;
+                color: #4db8ff;  /* Light blue for selected tab text */
+                border-bottom: 2px solid #4a90d9;  /* Blue underline for active tab */
+                font-weight: 500;
+            }
+            QTabBar::tab:!selected {
+                margin-top: 2px;
+            }
+            
+            /* Status bar */
+            QStatusBar {
+                background-color: #252525;
+                color: #a0a0a0;
+                border-top: 1px solid #3a3a3a;
+                padding: 5px;
+            }
+            
+            /* Scrollbars */
+            QScrollBar:vertical {
+                border: none;
+                background: #252525;
+                width: 10px;
+                margin: 0px;
+            }
+            QScrollBar::handle:vertical {
+                background: #3a3a3a;
+                min-height: 20px;
+                border-radius: 5px;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+            
+            /* Tables */
+            QTableView, QTableWidget {
+                background-color: #252525;
+                gridline-color: #3a3a3a;
+                color: #f0f0f0;
+                selection-background-color: #3d6e94;
+                selection-color: #ffffff;
+                border: 1px solid #3a3a3a;
+            }
+            QHeaderView::section {
+                background-color: #2d2d2d;
+                color: #f0f0f0;
+                padding: 5px;
+                border: none;
+                border-right: 1px solid #3a3a3a;
+                border-bottom: 1px solid #3a3a3a;
+            }
+        """)
+        
         # Ensure logs directory exists at the root of the application
         self._log_dir = Path(__file__).parent.parent.parent / "logs"
         self._log_dir.mkdir(exist_ok=True, parents=True)
@@ -694,68 +846,6 @@ class SimulatorWidget(QMainWindow):
         font = QFont("Segoe UI", 10)
         self.setFont(font)
         
-        # Set stylesheet
-        stylesheet = """
-            QWidget {
-                background-color: #f0f0f0;
-            }
-            
-            QGroupBox {
-                border: 1px solid #ccc;
-                border-radius: 5px;
-                margin-top: 10px;
-            }
-            
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                subcontrol-position: top center;
-                padding: 5px;
-                border-bottom: 1px solid #ccc;
-            }
-            
-            QLabel {
-                color: #333;
-            }
-            
-            QPushButton {
-                background-color: #fff;
-                border: 1px solid #ccc;
-                border-radius: 5px;
-                padding: 5px;
-            }
-            
-            QPushButton:hover {
-                background-color: #f5f5f5;
-            }
-            
-            QPushButton:pressed {
-                background-color: #ddd;
-            }
-            
-            QSlider {
-                background-color: #fff;
-                border: 1px solid #ccc;
-                border-radius: 5px;
-                padding: 5px;
-            }
-            
-            QSlider::handle {
-                background-color: #333;
-                border: 1px solid #ccc;
-                border-radius: 5px;
-                padding: 5px;
-            }
-            
-            QSlider::handle:hover {
-                background-color: #555;
-            }
-            
-            QSlider::handle:pressed {
-                background-color: #777;
-            }
-        """
-        self.setStyleSheet(stylesheet)
-    
     def setup_connections(self):
         """Set up signal-slot connections."""
         # Connect inverter state change callbacks

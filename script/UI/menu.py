@@ -288,9 +288,19 @@ class MainWindow(QMainWindow):
                 )
                 return
                 
-            # Get the path to the simulator script
-            script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            simulator_path = os.path.join(script_dir, 'UI', 'simulator.py')
+            # Get the base directory based on whether we're running as a PyInstaller bundle
+            if getattr(sys, 'frozen', False):
+                # Running as PyInstaller bundle
+                base_dir = sys._MEIPASS
+                # In the bundle, the simulator is in the root directory
+                simulator_path = os.path.join(base_dir, 'simulator.py')
+                # Also try the UI directory for backward compatibility
+                if not os.path.exists(simulator_path):
+                    simulator_path = os.path.join(base_dir, 'UI', 'simulator.py')
+            else:
+                # Running in development
+                script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                simulator_path = os.path.join(script_dir, 'UI', 'simulator.py')
             
             # Check if the simulator file exists
             if not os.path.exists(simulator_path):

@@ -3,11 +3,7 @@ py -m venv venv
 py -m pip install -r requirements.txt   # Install dependencies
 python.exe -m pip install --upgrade pip # Upgrade pip
 py -m pip install --upgrade pyinstaller # Upgrade pyinstaller
+python main.py
 #
 .\CDE.bat
 python build.py
-
-python main.py
-python script/simulator/go.py
-
-aggiungi a script/UI/menu.py una voce per l'apertura del simulatore (script/simulator/go.py)

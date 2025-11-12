@@ -199,8 +199,7 @@ python main.py --debug
 ### Support Channels
 
 - **GitHub Issues**: [Create a new issue](https://github.com/Nsfr750/Nidec_CommanderCDE/issues)
-- **Discord**: [Join our server](https://discord.gg/ryqNeuRYjD)
-- **Email**: [nsfr750@yandex.com](mailto:nsfr750@yandex.com)
+- **Email**: [Nsfr750](mailto:nsfr750@yandex.com)
 
 ### When Requesting Help
 
@@ -212,8 +211,3 @@ Please provide the following information:
 4. Steps to reproduce the issue
 5. Any error messages or logs
 6. Screenshots if applicable
-
----
-
-*Last updated: 2025-09-01*  
-*© 2025 Nsfr750 - All rights reserved*

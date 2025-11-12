@@ -7,13 +7,14 @@ This document outlines the structure of the Nidec CommanderCDE project.
 ```text
 Nidec_CommanderCDE/
 ├── .github/                    # GitHub configuration and workflows
-│   ├── FUNDING.yml             # Funding information
-│   └── CODEOWNERS              # Code ownership definitions
+│   ├── CODEOWNERS              # Code ownership definitions
+│   └── FUNDING.yml             # Funding information
 ├── docs/                       # Documentation files
 │   ├── CODE_OF_CONDUCT.md      # Code of conduct
 │   ├── CONTRIBUTING.md         # Contribution guidelines
 │   ├── developer_guide.md      # Developer documentation
-│   ├── README.md 
+│   ├── README.md               # Project README
+│   ├── ROADMAP.md              # Development roadmap
 │   ├── SECURITY.md             # Security policy
 │   ├── STRUCTURE.md            # This file
 │   ├── troubleshooting.md      # Troubleshooting guide

@@ -2,24 +2,35 @@
 
 ## [Unreleased]
 
-### Upcoming Features
+### Added
 
-- Add more Nidec drive models
-- Implement advanced diagnostic features
+- Support for additional Nidec drive models
+- Advanced diagnostic features
+- Enhanced documentation and user guides
 
 ## [0.0.5] - 2025-11-11
 
 ### Added 0.0.5
 
-- Implemented parameter backup/restore functionality
-- Added support for custom parameter presets
+- Parameter backup/restore functionality
+- Support for custom parameter presets
 - Enhanced error handling and user feedback
+- Comprehensive documentation updates
+- Improved help system with detailed troubleshooting
+
+### Changed 0.0.5
+
+- Updated UI for better usability
+- Improved parameter management interface
+- Enhanced language support for Italian
 
 ### Fixed 0.0.5
 
 - Resolved issues with language switching
 - Fixed UI alignment in parameter tables
 - Improved stability of serial communication
+- Fixed various UI layout issues
+- Resolved documentation inconsistencies
 
 ## [0.0.4] - 2025-07-02
 

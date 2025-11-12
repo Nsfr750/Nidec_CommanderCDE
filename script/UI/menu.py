@@ -244,6 +244,11 @@ class MainWindow(QMainWindow):
         help_action.setShortcut(QKeySequence("F1"))  # F1 is commonly used for Help
         help_menu.addAction(help_action)
         
+        # Help -> Wiki
+        wiki_action = QAction(t('wiki', self.current_language, "Wiki"), self)
+        wiki_action.triggered.connect(self.open_wiki)
+        help_menu.addAction(wiki_action)
+        
         help_menu.addSeparator()
         
         # Help -> About
@@ -262,6 +267,21 @@ class MainWindow(QMainWindow):
         from script.UI.help import HelpWindow
         self.help_window = HelpWindow(self, self.current_language)
         self.help_window.show()
+        
+    def open_wiki(self):
+        """Open the project wiki in the default web browser."""
+        wiki_url = "https://github.com/Nsfr750/Nidec_CommanderCDE/wiki"
+        try:
+            import webbrowser
+            webbrowser.open(wiki_url)
+        except Exception as e:
+            logger.error(f"Failed to open wiki: {e}")
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Could not open the wiki page.\n\n"
+                f"Please visit: {wiki_url}"
+            )
     
     def show_about(self):
         """Show the about dialog."""
@@ -618,7 +638,7 @@ if __name__ == "__main__":
         # Set application metadata
         app.setApplicationName("Nidec Commander CDE")
         app.setOrganizationName("Nidec")
-        app.setApplicationVersion("1.0.0")
+        app.setApplicationVersion("0.0.5")
         
         # Create and show the main window
         window = MainWindow()

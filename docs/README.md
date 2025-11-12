@@ -1,17 +1,21 @@
-# Nidec CommanderCDE
+# Nidec CommanderCDE v0.0.5
 
 ## Overview
 
-Nidec CommanderCDE is a graphical user interface application designed for controlling and monitoring Nidec motor drives. The application provides a user-friendly interface for managing Nidec CDE series drives, offering real-time monitoring, parameter configuration, and diagnostic capabilities.
+Nidec CommanderCDE is a comprehensive graphical user interface application designed for controlling and monitoring Nidec CDE series motor drives. Version 0.0.5 introduces enhanced parameter management, improved UI, and comprehensive documentation.
+
+The application provides a user-friendly interface for managing Nidec CDE series drives, offering real-time monitoring, parameter configuration, and diagnostic capabilities.
 
 ## Features
 
 - **Drive Connection Management**
+
   - Multiple connection interfaces support
   - Automatic port detection
   - Connection status monitoring
 
 - **Real-time Monitoring**
+
   - Speed and frequency display
   - Current and voltage measurements
   - Status indicators

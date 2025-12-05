@@ -187,3 +187,4 @@ clean_pycache.py
 build.py
 firma.bat
 
+.windsurf/rules
